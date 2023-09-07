@@ -517,6 +517,7 @@ fn Y_values() -> Tensor<FixedType>  {
                FixedTrait::new(684471, true ),
            ].span(),
             extra: Option::None(())
-     ); 
+     );
+    return tensor;
 
-\n }
+}
