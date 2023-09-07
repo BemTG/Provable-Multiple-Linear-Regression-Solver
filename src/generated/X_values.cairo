@@ -7097,4 +7097,6 @@ fn X_values() -> Tensor<FixedType>  {
             extra: Option::None(())
      ); 
 
-\n }
+    return tensor;
+
+}
