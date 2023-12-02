@@ -53,8 +53,8 @@ assert(normalized_dataset.x_values.data.len()== main_x_vals.data.len() &&
 normalized_dataset.y_values.data.len()== main_y_vals.data.len() , 'normalized data shape mismatch');
 // performing checks on shape on coefficient values (gradient vals + bias)
 assert(model.coefficients.data.len() == *main_x_vals.shape.at(1)+1, 'coefficient data shape mismatch');
-// checking accuracy of model
-assert(r_score_res >= FixedTrait::new(62259, false), 'AAVE model acc. less than 95%');
+// model accuracy deviance checks
+assert(r_squared_score >= FixedTrait::new(62259, false), 'AAVE model acc. less than 95%');
 
 // using model to forecast aave's 7 day WETH net revenue forecast 
 let last_7_days_aave_data = aave_weth_revenue_data_input();
@@ -90,8 +90,8 @@ let mut rescale_forecasts = rescale_predictions(forecast_results, main_y_vals); 
 // normalized_dataset.y_values.data.len()== main_y_vals.data.len() , 'normalized data shape mismatch');
 // // performing checks on shape on coefficient values (gradient vals + bias)
 // assert(model.coefficients.data.len() == *main_x_vals.shape.at(1)+1, 'coefficient data shape mismatch');
-// // checking accuracy of model
-// assert(r_score_res >= FixedTrait::new(55699, false), 'Boston model acc. less than 84%');
+// // model accuracy deviance checks
+// assert(r_squared_score >= FixedTrait::new(55699, false), 'Boston model acc. less than 84%');
 
 
 // // boston user inputed house valuation predictions
@@ -116,8 +116,8 @@ let mut rescale_forecasts = rescale_predictions(forecast_results, main_y_vals); 
 // // // performing checks on shape on coefficient values (gradient vals + bias) 
 // // assert(model.gradient.data.len() == 1,  'gradient data shape mismatch');
 // // assert(model.bias.data.len() == 1,  'bias data shape mismatch');
-// // // checking accuracy of model
-// // assert(r_score_res >= FixedTrait::new(62259, false), 'Linear model acc. less than 95%');
+// // // model accuracy deviance checks
+// // assert(r_squared_score >= FixedTrait::new(62259, false), 'Linear model acc. less than 95%');
 
 // // linear regression model new input predictions
 // let mut user_value =   TensorTrait::<FP16x16>::new(shape: array![2].span(), data: array![FixedTrait::new(65536, false), FixedTrait::new(65536, true)].span());
