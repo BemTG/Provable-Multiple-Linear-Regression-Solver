@@ -52,8 +52,8 @@ let mut reconstructed_ys = model.predict (normalized_dataset.x_values);
 let mut r_squared_score = calculate_r_score(normalized_dataset.y_values,reconstructed_ys);
 r_squared_score.print(); 
 ```
-### Tip
+### Tutorial walkthroughs
 To provide a deeper understanding of how the MLR solver works several notebook tutorials have been implemented as a walkthrough example 😁. Some of the examples include:
-- Forecasting AAVE's WETH Pool Net Revenue 
+- [Forecasting AAVE's WETH Pool Net Revenue](https://github.com/BemTG/Provable-Multiple-Linear-Regression-Solver/blob/main/notebook%20tutorials/Provable%20Multiple%20Linear%20Regression%20Solver%20(Forecasting%20AAVE%20Business%20metrics).ipynb)
 - Boston Housing Dataset: Estimates valuation of house prices given multiple feature inputs
 - Basic Simple Linear regression dataset
