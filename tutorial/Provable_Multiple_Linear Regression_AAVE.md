@@ -8,7 +8,7 @@ The key benefit of this Lightweight Multiple Linear Regression Solver lies in it
 To give a brief overview of MLR, it is used to model the relationship between a single dependent variable denoted as y, and multiple independent variables, such as x1, x2, etc. This method extends the principles of simple linear regression by allowing us to incorprate  multiple explanatory factors to predicting y. The significant advantage lies in its capability to evaluate both individual and joint linear relationships between each feature and the target variable, providing a comprehensive understanding of how changes in predictors correspond to changes in the outcome.
 
 $$
-y = β0 + β1*x1 + β2*x2 + ... + βn*xn + ε  \quad  \quad 
+y = β0 + (β1 * x1) + (β2 * x2) + ... + (βn * xn) + e  \quad   
 \begin{align*}
 y & \text{= dependent variable} \\
 x1,x2..xn & \text{= independent variables} \\
@@ -44,7 +44,7 @@ To begin with, we will use the Aave dataset which can be accessed  from this [li
 In order to seperate the feature and label of our dataset, we have replicated the lifetime repayments column into a new target variable column whilst shifting its values up by 7 rows. This aligns each repayment value with the appropriate features from 7 days prior. Consequently,  the `lifetimeRepayments_7day_forecast` column will serve as our predictive label (y), while the other metrics across the same rows become our explanatory variables (X) for predicting future repayments. 
 
 By framing our features and labels in this format, we will be able to train the MLR model to be able to estimate the daily revenue repayments based on current lending pool metrics.
-```python=
+```python
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -76,7 +76,7 @@ df = df[0:days_to_forecast]
 
 ### Data normalization
 We will normalize the data using min-max scaling to transform all features and labels onto a common 0-1 range. This enhances model stability since helps avoid overflow issues due to values being too large when compting the MLR gradients using the  closed-form approach.
-```python=
+```python
 def normalize_data(original_data):
     data_min = np.min(original_data, axis=0)
     data_max = np.max(original_data, axis=0)
@@ -103,7 +103,7 @@ It's <b>very important</b> to notice that in the `decorrelate_features` function
 
 This is better illustarted in the  `calculate_gradients` function, where the process initiates from the last fully orthogonalized X feature. It then computes the corresponding gradient and removes this feature's influence from the y label. By iteratively repeating this process across all features we can compute the gradient without the need to have all  features fully orthogonlized since we are removing their influences iteratively. This streamlined approach reduces computational steps and memory requirements, enhancing the algorithm's efficiency and performance.
 
-```python=
+```python
 #We will first transpose the X features and add a bias term.
 def transpose_and_add_bias(feature_data):
     transposed_data= feature_data.T
@@ -157,7 +157,7 @@ print('All regression coefficient values, including the bias term: ', real_gradi
 
 Using the computed regression coeficients we can now rebuild the y labels to see how well we fit to the dataset. In order to achieve this we simply compute the dot product between the calculated coefficient values and original X features. 
 
-```python=
+```python
 def denormalize_data(original_data,normalized_data):
     data_min = np.min(original_data)
     data_max = np.max(original_data)
@@ -190,7 +190,7 @@ print("R^2 score (denormalized):", accuracy_denormalized)
 With the model now fitted, we can use the most recent datapoints to forecast future revenue projections. Additionally, we will calculate the uncertainty bounds of 95% confidence interval for these predictions to quantify the reliability of our revenue projections based on the model's historical accuracy across the training data. By using both estimates of prediction and confidence intervals, we provide both revenue expectations and precision guidance that can help in business planning.
 
 
-```python=
+```python
 df_forecast = df_main[-7:]
 df_forecast_data = df_forecast.to_numpy()
 #normalize data
@@ -272,7 +272,7 @@ test = "scarb cairo-test -f multiple_linear_regression_test"
 ```
 Now lets include the multiple local modules that we will work in the subsequent steps into `src/lib.cairo`. This will let our compiler know which files to include during the final compilation of our code. 
 
-```shell=
+```shell
 mod test;
 mod data_preprocessing;
 mod helper_functions;
@@ -282,7 +282,7 @@ mod model;
 ### Converting the dataset to Cairo 
 
 In order to convert our AAVE dataset to Cairo let's execute the following python code in our jupyter notebook. This simply creates a folder for us and converts the the x and y variables into Orion's 16x16 tensor format whilst importing all the necessary  libraries in the process. Orion's 16x16 tensor format was chosen due to having a relatively good degree of accuracy for both the integer part and decimal part based relative to our AAVE dataset.
-```python=
+```python
 # Convert the original data to Cairo 
 def generate_cairo_files(data, name, folder_name):
     os.makedirs(f'multiple_linear_regression/src/datasets/{folder_name}', exist_ok=True)
@@ -331,7 +331,7 @@ To facilitate this process, we will establish a dedicated Cairo file named `data
 
 As we can see from below we have implmented a `Dataset` struct to encapsulate the predictor features (x_values) and target variable (y_values) into a single reusable data object. By bundling x and y into Dataset, we can easily implement new methods into it such as the `normalize_dataset()`, allowing for a seamless normalization of both components simultaneously. This approach not only streamlines normalization operations in a single step but also eliminates redundant logic in future data normalization operations. 
 
-```rust=
+```rust
 // importing libs
 use orion::operators::tensor::{
     Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, 
@@ -428,7 +428,7 @@ At the heart of this file lies the pivotal `MultipleLinearRegression()` function
 Let's also implement a `predict()` method into the new `MultipleLinearRegressionModel` struct which  should enable us to generate new predictions and forecasts  by simply passing the new feature X inputs to the function. This modular apporach  avoids the need to re-fit the model each time when making new predictions allowing us to store, access and manipulate model coefficients in a convinient manner.
 
 All of the function MLR functions implemeted can be seen below:
-```rust=
+```rust
 use orion::operators::tensor::{
     Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, 
     FP16x16TensorSub, FP16x16TensorAdd, FP16x16TensorDiv, FP16x16TensorMul};
@@ -635,7 +635,7 @@ Now let's create a seperate file named `helper_functions.cairo` where we will us
 
 
 
-```rust=
+```rust
 use debug::PrintTrait;
 use array::{ArrayTrait, SpanTrait};
 use orion::operators::tensor::{
@@ -802,7 +802,7 @@ fn rescale_predictions(prediction_result:Tensor<FP16x16>, y_values: Tensor<FP16x
 At this stage, we have already implemented all the  important sections of this tutorial in  cairo. What's left is doing some testing to ensure our model is behaving as expected. To perform our test we will create a new test file called `test.cairo` and import all the necessary libraries including our x and y values and the MLR solver traits and functions.  
 
 
-```rust=
+```rust
 // use traits::Into;
 use debug::PrintTrait;
 use array::{ArrayTrait, SpanTrait};
@@ -872,7 +872,7 @@ Our model will get tested under the `multiple_linear_regression_test()` function
 
 Finally, we can execute the test file by running:
 
-```shell=
+```shell
 >> scarb cairo-test -f multiple_linear_regression_test
 
 testing multiple_linear_regresion ...
