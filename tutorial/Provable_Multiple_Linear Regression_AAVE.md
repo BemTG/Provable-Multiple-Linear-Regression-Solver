@@ -212,7 +212,7 @@ Y_range = Y_max - Y_min
 Y_min = np.min(Y_original, axis=0)
 Y_max = np.max(Y_original, axis=0)
 Y_range = Y_max - Y_min
-
+forecast_pred =  (forecast_normalized * Y_range) + Y_min
 forecast_plot_data = np.insert(forecast_pred, 0, Y_original[-1])
 # Calculate expanding confidence intervals
 residual = Y_original - reconstructed_y
@@ -240,6 +240,15 @@ plt.title(" 7 Day Forecast (AAVE's total WETH lifetimeRepayment)")
 plt.legend()
 # Display the plot
 plt.show()
+
+##forecast_pred values
+## Day 1 Forecast:  95.62317677745183
+## Day 2 Forecast 96.5934311440076
+## Day 3 Forecast 97.113932324072
+## Day 4 Forecast 97.5688580115012
+## Day 5 Forecast 98.45026776663158
+## Day 6 Forecast 99.42560920294711
+## Day 7 Forecast 100.49892105541984
 ```
 
 <figure><img src="forecasts.png" alt=""><figcaption></figcaption></figure>
