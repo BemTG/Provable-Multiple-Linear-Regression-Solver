@@ -1,9 +1,9 @@
 # Provable Multiple Linear Regression Solver: Forecasting AAVE's Revenue metrics
 
-For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> from scratch. We'll then apply it to forecast the 7-day net revenue for AAVE's WETH Pool, serving as an illustrative example. In the second half-end of the tutorial, we will convert the data & model to Cairo enabling us to make the entire MLR system and predictions to be fully  <b>Provable & Verifiable. </b>
+For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and  use it to forecast AAVE's future projected revenue, as an illustrative example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
 
 ## Provability & Verifiability
-The key benefit of this Lightweight Multiple Linear Regression Solver lies in its commitment to Provability and Verifiability. By utilizing Cairo & Orion, the entire MLR system becomes inherently provable through STARKs, ensuring unparalleled transparency. This enables every inference of the model construction, execution, and prediction phase to be transparently proved using e.g. LambdaClass STARK Prover. In essence, the Provability and Verifiability aspect ensures that the tool is not only for prediction but also a framework to build accountability and trust in on-chain business environments.
+The key benefit of this Lightweight Multiple Linear Regression Solver lies in its commitment to Provability and Verifiability. By utilizing Cairo & Orion, the entire MLR system becomes inherently provable through STARKs, offering unparalleled transparency. This enables every inference of the model construction, execution, and prediction phase to be transparently proved using e.g. LambdaClass STARK Prover. In essence, the Provability and Verifiability aspect ensures that the tool is not only for prediction but also a framework to build accountability and trust in on-chain business environments.
 ## Brief intro to MLR
 To give a brief overview of MLR, it is used to model the relationship between a single dependent variable denoted as y, and multiple independent variables, such as x1, x2, etc. This method extends the principles of simple linear regression by allowing us to incorporate  multiple explanatory factors to predict y. The significant advantage lies in its capability to evaluate both individual and joint linear relationships between each feature and the target variable, providing a comprehensive understanding of how changes in predictors correspond to changes in the outcome.
 
@@ -18,19 +18,19 @@ x1,x2..xn & \text{= independent variables} \\
 \end{align*}
 $$
 
-The regression coefficients, encapsulated by β0, β1...βn play a pivotal role in quantifying the impact of each feature variable on the dependent variable. It not only enables us to discern the individual impact (magnitude and direction) but also unveils how they collaboratively combine to shape outcomes. 
+The regression coefficients, illustrated by β0, β1...βn play a pivotal role in quantifying the impact of each feature variable on the dependent variable. It not only enables us to discern the individual impact (magnitude and direction) but also unveils how they collaboratively combine to shape outcomes. 
 
-By incorporating multiple features, we improve the prediction & forecasting accuracy of our model when compared to relying solely on a single predictor, as seen with simple regression. This enhancement can be mainly attributed to the fact that  real-world outcomes  are typically influenced by a myriad of factors. Therefore, leveraging multiple linear regression (MLR) serves as a foundational stepping stone to adeptly capture the intricate relationships between features and labels, ultimately guiding us in building more accurate and highly interpretable models.
+When incorporating multiple factors into our model, we can improve the prediction & forecasting accuracy of our model when compared to relying solely on a single predictor, as seen with simple regression. This enhancement can be mainly attributed to the fact that  real-world outcomes being typically influenced by a myriad of factors. Therefore, leveraging multiple linear regression (MLR) serves as a foundational stepping stone to adeptly capture the intricate relationships between features and labels, ultimately guiding us in building accurate and highly interpretable models.
 
 ## Closed-form approach for computing MLR gradients
 
-As outlined above, MLR remains a powerful tool for problem-solving in many data-oriented business applications. As we step into the ProvableML domain to enhance model transparency, these algorithms still prove to be highly advantageous in on-chain environments due to their lightweight, interpretable, and cost-efficient attributes.
+As outlined above, MLR still remains a powerful tool for problem-solving in many data-oriented business applications. As we step into the ProvableML domain to enhance model transparency, these algorithms still prove to be highly advantageous in on-chain environments due to their lightweight, interpretable, and cost-efficient attributes.
 
 Traditionally, the common approach to MLR involves computing pseudo-inverses and Singular Value Decomposition (SVD). While robust, their implementation complexity can often overshadow the regression problem at hand. Consequently, gradient-based methods are often preferred in data science projects, but this also can be deemed excessive due to the resource-intensive iterative approach taken to approximate gradients which can be very costly. In addition to this, the manual hyperparameter tuning required can be a significant hindrance, especially in automated on-chain environments.
 
-In light of these considerations, this tutorial introduces an intuitive closed-form approach to calculating MLR gradients without any hyperparameter tuning, making it easy to estimate computational steps/costs required given a dataset.
+In light of these considerations, this tutorial introduces an intuitive closed-form approach to calculating MLR gradients without any hyperparameter tuning, making it easy to implement and run MLR algorithms effectively on Starknet.  This approach also makes it easy to estimate computational steps/costs required to run MLR given a dataset.
 
-The MLR comprises of three integral components:
+The closed-form MLR comprises of three integral components:
 
 1. <b>Orthogonalization of Input Features:</b> Ensures independence among the X features.
 2. <b>Gradient Calculation:</b> Computes the exact gradient between each decorrelated X feature and y variable.
@@ -39,7 +39,7 @@ The MLR comprises of three integral components:
 To demonstrate a realistic end-to-end implementation, we'll first work  with the AAVE dataset before delving into the implementation of the MLR Solver. Step by step, we'll implement the full process in Python first, which should lay the groundwork to allow us to make a seamless transition to Cairo in the subsequent stages of this tutorial.
 ### Preparing the AAVE dataset 
 
-To begin with, we will use the Aave dataset which can be accessed  from this [link](https://app.aavescan.com/). Our cleaned-up dataset includes various business metrics such as liquidity incentives and borrowing rates, providing valuable insights for forecasting future revenues. 
+To begin with, we will use the Aave dataset which can be accessed  from this [link](https://app.aavescan.com/). We will work with our cleaned-up version of the dataset which includes various business metrics such as liquidity incentives and borrowing rates, providing valuable insights for forecasting future revenues. 
 
 In order to separate the feature and label of our dataset, we have replicated the lifetime repayments column into a new target variable column whilst shifting its values up by 7 rows. This aligns each repayment value with the appropriate features from 7 days prior. Consequently,  the `lifetimeRepayments_7day_forecast` column will serve as our predictive label (y), while the other metrics across the same rows become our explanatory variables (X) for predicting future repayments. 
 
@@ -75,7 +75,7 @@ df = df[0:days_to_forecast]
 | 26 | 0.000017 | 10.00 | 14.1 | 215.0 | 0.0575 | 128.0 | 28.7 | 77.3 | 3150.0 | 78.0 |
 
 ### Data normalization
-We will normalize the data using min-max scaling to transform all features and labels into a common 0-1 range. This enhances model stability since helps avoid overflow issues due to values being too large when compting the MLR gradients using the  closed-form approach.
+We will now normalize the data using min-max scaling to transform all features and labels into a common 0-1 range.
 ```python
 def normalize_data(original_data):
     data_min = np.min(original_data, axis=0)
@@ -99,9 +99,9 @@ y_normalized= normalize_data(Y_original)
 ### Computing MLR gradients
 As outlined in the prior section, this closed-form approach to computing the regression coefficients does not rely on gradient descent. Instead, it  orthogonalizes X feature variables, ensuring independence across predictors. It then calculates the gradient between the orthogonalized X features and the y variable.  This approach allows us to compute the exact coefficients in a single step, eliminating the need for iterative approximations.
 
-It's <b>very important</b> to notice that in the `decorrelate_features` function, only the last feature row  is fully orthogonalized. The rest of the features are  decorelated from one another but <b>are not fully orthogonal to each other</b>. This is done to save on computational costs and make the algorithm more efficient since we can still compute the coefficients without necessarily needing to fully orthogonalize all features.
+It's <b>very important</b> to notice that in the `decorrelate_features` function, only the last feature row  is fully orthogonalized. The rest of the features are  decorelated from one another but <b>are not fully orthogonal to each other</b>. This is done to save on computational costs and make the algorithm more efficient since we can still compute the coefficients without necessarily needing to fully orthogonalize them.
 
-This is better illustrated in the  `calculate_gradients` function, where the process initiates from the last fully orthogonalized X feature. It then computes the corresponding gradient and removes this feature's influence from the y label. By iteratively repeating this process across all features we can compute the gradient without the need to have all  features fully orthogonalized since we are removing their influences from the y label iteratively. This streamlined approach reduces computational steps and memory requirements, enhancing the algorithm's efficiency and performance.
+This is better illustrated in the  `calculate_gradients` function, as the process starts from the last fully orthogonalized X feature. It then computes the corresponding gradient and removes this feature's influence from the y label. By iteratively repeating this process across all features we can compute the gradient without the need to have all  features fully orthogonalized since we are removing their influences from the y label iteratively. This streamlined approach reduces computational steps and memory requirements, enhancing the algorithm's efficiency and performance.
 
 ```python
 #We will first transpose the X features and add a bias term.
@@ -155,7 +155,7 @@ print('All regression coefficient values, including the bias term: ', real_gradi
 ```
 ###  Reconstructing the y labels using the calculated gradients and X feature data
 
-Using the computed regression coefficients we can now rebuild the y labels to see how well we fit into the dataset. In order to achieve this we simply compute the dot product between the calculated coefficient values and original X features. 
+Using the computed regression coefficients we can now rebuild the y labels to see how well they fit to the dataset. In order to achieve this we simply compute the dot product between the calculated coefficient values and original X feature values.
 
 ```python
 def denormalize_data(original_data,normalized_data):
@@ -246,12 +246,12 @@ plt.show()
 
 
 ## Transition to Cairo
-Now that we have covered all the steps of constructing and fitting the MLR model using the AAVE dataset in Python, our subsequent step will be to implement it in Cairo. This transition will provide end-to-end provability across all aspects of the multiple linear regression system.
+Now that we have covered all the steps for constructing and fitting the MLR model using the AAVE dataset in Python, our subsequent step will be to implement it in Cairo. This transition will provide end-to-end provability across all aspects of the multiple linear regression system.
 
-In order to catalyze our development we will leverage Orion's built-in functions and operators to construct our fully verifiable MLR Solver and utilize it to forecast the AAVE's Net Revenue.
+In order to catalyze our development we will leverage Orion's built-in functions and operators to construct the MLR Solver and use it to forecast AAVE's Net Revenue.
 
 ### Code Structure
-The outlined code structure below should serve as a guide to help with  our implementation, as we start to build the MLR Solver and use it to model the AAVE dataset.
+The outlined code structure below should serve as a guide to help with  our implementation as we will be working within multiple folders.
 ```
 .
 |
@@ -295,7 +295,7 @@ orion = { git = "https://github.com/gizatechxyz/onnx-cairo" }
 [scripts]
 test = "scarb cairo-test -f multiple_linear_regression_test"
 ```
-Now let's include the multiple local modules that we will work with  into `src/lib.cairo`. This will let our compiler know which files to include during the final compilation of our code. 
+Now let's  replace the contents of  `src/lib.cairo` with the following code. This will let our compiler know which files to include during the compilation of our code. 
 
 ```shell
 mod test;
@@ -306,7 +306,9 @@ mod model;
 ```
 ### Converting the dataset to Cairo 
 
-To convert the AAVE dataset to Cairo let's execute the following Python code in our jupyter notebook. This simply creates a new `datasets` folder for us and converts the x and y variables into Orion's 16x16 tensor format. Orion's 16x16 tensor format was chosen for this particular tutorial, due to having a relatively good degree of accuracy for both the integer part and decimal part relative to our AAVE dataset. 
+To convert the AAVE dataset to Cairo let's execute the following Python code. This simply creates a new `datasets` folder for us and converts the x and y variables into Orion's 16x16 tensor format.
+
+Orion's 16x16 tensor format was chosen for this particular tutorial, due to having a relatively good degree of accuracy for both the integer part and decimal part relative to our AAVE dataset. 
 ```python
 # Convert the original data to Cairo 
 def generate_cairo_files(data, name, folder_name):
@@ -348,9 +350,9 @@ generate_cairo_files(df_forecast_data, 'aave_weth_revenue_data_input', 'user_inp
 ```
 The converted  x and y  values will now be populated into `aave_x_features.cairo` and `aave_y_labels.cairo`,  which should be found under the `src/dataset/aave_data` folder. 
 
-On the other hand, the `aave_weth_revenue_data_input` will populated into `src/dataset/user_inputs_data` which is a separate folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics, which  will be later for performing the 7-day revenue forecasts. 
+On the other hand, the `aave_weth_revenue_data_input` will populated into `src/dataset/user_inputs_data` which is a separate folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics, which  will be later used for performing the 7-day revenue forecasts. 
 
-Now that we have placed the files into this new folder structure,  we need to make sure that the files are still accessible to the compiler. Hence, let's create the files `aave_data.cairo` and `user_inputs_data.cairo` under the dataset folder and add the following module references accordingly.
+Now that we have placed the files into this new folder structure,  we need to make sure that the files are still accessible to the compiler. Hence, let's create the files `aave_data.cairo` and `user_inputs_data.cairo` and add the following module references accordingly.
 ```rust
 // in aave_data.cairo
 mod aave_x_features;
@@ -363,9 +365,9 @@ mod aave_weth_revenue_data_input;
 
 ### Data Preprocessing
 
-Now that our dataset has been generated, it is crucial to implement data normalization before feeding it into the MLR Solver. This is  <b>highly recommended </b> for any future MLR implementation in Cairo to mitigate potential overflow issues during subsequent stages. This is due to the closed-form approach for computing the regression coefficients involving squaring x values, which can become relatively large if left unnormalized.
+Now that our dataset has been generated, it is crucial to implement data normalization before feeding it into the MLR Solver. This is  <b>highly recommended </b> for any future MLR implementation in Cairo to mitigate potential overflow issues during subsequent stages. This is due to the MLR closed-form approach  involving squaring x values, which can get very large if left unnormalized.
 
-To facilitate this process, we will establish a dedicated Cairo file named `data_preprocessing.cairo` which should be located under the main `src` folder. This file will serve as the home for all our data preprocessing functions, including the  min-max normalization function.
+To facilitate this process, we will establish a dedicated Cairo file named `data_preprocessing.cairo` which should be located under the main `src` folder. This file will store all our data preprocessing functions, including the min-max normalization function.
 
 ```rust
 // importing libs
@@ -473,10 +475,6 @@ Looking at the code above, we also have implemented a new `Dataset` struct to en
 ### The MLR Solver in Cairo
 
 To keep everything organized let's now make a new folder named `model` under the main `src` folder. Within it, we will  create a dedicated Cairo file named `multiple_linear_regression_model.cairo` to host all our MLR functions in Cairo.
-
-At the heart of this file lies the pivotal `MultipleLinearRegression()` function, which orchestrates the entire model fitting process. This function plays a central role by invoking  critical functions such  as `Decorrelate_x_features()`, `add_bias_term()`, and `compute_gradients()`, to calculate the regression coefficients. It is important to notice that the output of the `MultipleLinearRegression` function returns the newly created  `MultipleLinearRegressionModel` object type. This is done to encapsulate the trained model parameters into a reusable bundle that contains the fitted coefficients.
-
-Let's also implement a `predict()` method into the new `MultipleLinearRegressionModel` struct which  should enable us to generate new predictions and forecasts  by simply passing the new feature X inputs to the function. This modular approach  avoids the need to re-fit the model each time when making new predictions allowing us to store, access, and conveniently manipulate model coefficients.
 
 All of the function MLR functions implemented can be seen below:
 ```rust
@@ -740,8 +738,11 @@ fn compute_gradients(
     return gradient_values_flipped;
 }
 ```
+At the core of this file lies the pivotal `MultipleLinearRegression()` function, which orchestrates the entire model fitting process. This function plays a central role by invoking  critical functions such  as `Decorrelate_x_features()`, `add_bias_term()`, and `compute_gradients()`, to calculate the regression coefficients. It is important to notice that the output of the `MultipleLinearRegression` function returns the newly created  `MultipleLinearRegressionModel` object type. This is done to encapsulate the trained model parameters into a reusable bundle that contains the fitted coefficients.
 
-Once again to ensure that the file is accessible to the compiler we need to add a reference module. For this, let's add the file named `model.cairo` under the main `src` folder.
+We have also implemented a `predict()` method into the new `MultipleLinearRegressionModel` struct which  should enable us to generate new predictions and forecasts  by simply passing the new feature X inputs to the function. This modular approach  avoids the need to re-fit the model each time when making new predictions allowing us to store, access, and conveniently manipulate model coefficients.
+
+Once again to ensure that the file is accessible to the compiler we need to also add a reference module. For this, let's create the file named `model.cairo` under the main `src` folder and add the following:
 
 ```rust
 // in model.cairo
@@ -751,7 +752,7 @@ mod multiple_linear_regression_model;
 ### Helper functions
 
 Now let's create an additional file named `helper_functions.cairo` under the main `src` folder which will
- host all our helper functions required to construct the MLR Solver. Some of these functions will also be used later during the testing phase to assess the model's performance once fitted. This file consists of multiple functions some of which include:
+ host all our helper functions required to construct the MLR Solver. Some of these functions stored here will also be used later during the testing phase to assess the model's performance once fitted. This file consists of multiple functions some of which include:
  
 - Function to help with retrieving tensor data by row and column index, which are essential for MLR construction
 - Function to compute the accuracy of our model using the R-squared method 
@@ -1050,7 +1051,7 @@ Our model will get tested under the `multiple_linear_regression_test()` function
 3. <b>Model fitting:</b> Using the `MultipleLinearRegression` function we fit the normalized dataset and compute the regression coefficients.
 4. <b>Computing accuracy of the model:</b> To calculate the accuracy we utilize the `predict` method to compute the dot product between  the model's regression coefficients and the x values. We then compute the R-squared score to measure the accuracy of our model.
 5. <b>Perform some testing:</b> In the subsequent step we perform some checks to ensure that  the tensor shape/dimension is correct. We also check the model's accuracy deviance to see if it's still within an acceptable range.
-6. <b>Making forecasts:</b> If our checks have passed then our model should be clear to enable us to make new predictions. For this, we will use the `aave_weth_revenue_data_input()` values which represent the most recent AAVE datapoints which should enable us to make forecasts for the upcoming 7 days of AAVE's WETH Pool revenue. As observed the prediction also coincides with the previously projected values during the Python implementation.
+6. <b>Making forecasts:</b> If our checks have passed then our model should be clear to enable us to make new predictions. For this, we will use the `aave_weth_revenue_data_input()` values which represent the most recent AAVE datapoints which should enable us to make forecasts for the upcoming 7 days of AAVE's WETH Pool revenue. 
 
 
 Finally, we can execute the test file by running:
@@ -1065,7 +1066,6 @@ test multiple_linear_regresion::test::multiple_linear_regression_test ...
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out;
 ```
 :drum_with_drumsticks:.... And as we can our test cases have passed! Hooray!! :confetti_ball: 
-
 
 Congratulations on reaching this point! :clap: You are now ready to implement fully transparent and verifiable forecasting solutions using this MLR framework. 
 
