@@ -36,7 +36,7 @@ The MLR comprises of three integral components:
 2. <b>Gradient Calculation:</b> Computes the exact gradient between each decorrelated X feature and y variable.
 3. <b>Forecasting & Predictions:</b> Utilizes the computed coefficients to make new predictions.
 ## Python implementation
-To demonstrate a realistic end-to-end implementation, we'll first work  with the AAVE dataset before delving into the implementation of the closed-form approach to computing MLR gradients. Step by step, we'll implement the full process in Python first, laying the groundwork for a seamless transition to Cairo in the subsequent stages of this tutorial.
+To demonstrate a realistic end-to-end implementation, we'll first work  with the AAVE dataset before delving into the implementation of the MLR Solver. Step by step, we'll implement the full process in Python first, which should lay the groundwork to allow us to make a seamless transition to Cairo in the subsequent stages of this tutorial.
 ### Preparing the AAVE dataset 
 
 To begin with, we will use the Aave dataset which can be accessed  from this [link](https://app.aavescan.com/). Our cleaned-up dataset includes various business metrics such as liquidity incentives and borrowing rates, providing valuable insights for forecasting future revenues. 
@@ -246,7 +246,7 @@ plt.show()
 
 
 ## Transition to Cairo
-Now that we're familiar with and have covered all the steps of constructing and fitting the MLR model to the AAVE dataset in Python, our subsequent step will be to implement it in Cairo. This transition we will enable end-to-end provability across all aspects of the multiple linear regression system.
+Now that we have covered all the steps of constructing and fitting the MLR model using the AAVE dataset in Python, our subsequent step will be to implement it in Cairo. This transition will provide end-to-end provability across all aspects of the multiple linear regression system.
 
 In order to catalyze our development we will leverage Orion's built-in functions and operators to construct our fully verifiable MLR Solver and utilize it to forecast the AAVE's Net Revenue.
 
@@ -281,7 +281,7 @@ mod model;
 ```
 ### Converting the dataset to Cairo 
 
-To convert our AAVE dataset to Cairo let's execute the following Python code in our jupyter notebook. This simply creates a new `datasets` folder for us and converts the x and y variables into Orion's 16x16 tensor format. Orion's 16x16 tensor format was chosen due to having a relatively good degree of accuracy for both the integer part and decimal part relative to our AAVE dataset. 
+To convert the AAVE dataset to Cairo let's execute the following Python code in our jupyter notebook. This simply creates a new `datasets` folder for us and converts the x and y variables into Orion's 16x16 tensor format. Orion's 16x16 tensor format was chosen for this particular tutorial, due to having a relatively good degree of accuracy for both the integer part and decimal part relative to our AAVE dataset. 
 ```python
 # Convert the original data to Cairo 
 def generate_cairo_files(data, name, folder_name):
@@ -321,11 +321,11 @@ generate_cairo_files(X_original, 'aave_x_features', 'aave_data')
 generate_cairo_files(Y_original, 'aave_y_labels', 'aave_data')
 generate_cairo_files(df_forecast_data, 'aave_weth_revenue_data_input', 'user_inputs_data')
 ```
-The converted  x and y 16x16 tensor values will now be populated into `aave_x_features.cairo` and `aave_y_labels.cairo`,  which should be found under the `src/dataset/aave_data` folder. 
+The converted  x and y  values will now be populated into `aave_x_features.cairo` and `aave_y_labels.cairo`,  which should be found under the `src/dataset/aave_data` folder. 
 
-On the other hand, the `aave_weth_revenue_data_input` will populated into a separate folder under `src/dataset/user_inputs_data`. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics which will be used as our reference when performing the 7-day AAVE's WETH pool Revenue in the last stages. 
+On the other hand, the `aave_weth_revenue_data_input` will populated into `src/dataset/user_inputs_data` which is a separate folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics, which  will be later for performing the 7-day revenue forecasts. 
 
-Now that we have placed the files into new folder structure,  we need to make sure that the files are still accessible to the compiler. Hence, we need create the new files `aave_data.cairo` and `user_inputs_data.cairo` under the dataset folder.  Let's now add the following module references accordingly.
+Now that we have placed the files into this new folder structure,  we need to make sure that the files are still accessible to the compiler. Hence, let's create the files `aave_data.cairo` and `user_inputs_data.cairo` under the dataset folder and add the following module references accordingly.
 ```rust
 // in aave_data.cairo
 mod aave_x_features;
@@ -340,9 +340,7 @@ mod aave_weth_revenue_data_input;
 
 Now that our dataset has been generated, it is crucial to implement data normalization before feeding it into the MLR Solver. This is  <b>highly recommended </b> for any future MLR implementation in Cairo to mitigate potential overflow issues during subsequent stages. This is due to the closed-form approach for computing the regression coefficients involving squaring x values, which can become relatively large if left unnormalized.
 
-To facilitate this process, we will establish a dedicated Cairo file named `data_preprocessing.cairo` which should be located under the main `src` folder. This file will serve as the home for all our data preprocessing functions, including the essential min-max normalization function.
-
-Looking at the code below we also have implemented a new `Dataset` struct to encapsulate the predictor features (x_values) and target variable (y_values) into a single reusable data object. By bundling x and y into Dataset, we can easily implement new methods into it such as the `normalize_dataset()`, allowing for a seamless normalization of both components simultaneously. This approach not only streamlines normalization operations in a single step but also eliminates redundant logic in future data normalization operations. 
+To facilitate this process, we will establish a dedicated Cairo file named `data_preprocessing.cairo` which should be located under the main `src` folder. This file will serve as the home for all our data preprocessing functions, including the  min-max normalization function.
 
 ```rust
 // importing libs
@@ -393,7 +391,7 @@ fn normalize_feature_data(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
     let tensor_shape = transposed_tensor.shape;
     let tensor_row_len = *tensor_shape.at(0); // 13 
     let tensor_column_len = *tensor_shape.at(1); //50
-    // loop and append max and min row values to corresponding  array
+    // loop and append max and min row values to the corresponding  array
     let mut i: u32 = 0;
     loop {
         if i >= tensor_row_len {
@@ -422,7 +420,7 @@ fn normalize_label_data(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
     let mut tensor_data_ = tensor_data;
     let mut normalized_array = ArrayTrait::<FP16x16>::new();
     let mut range = tensor_data.max_in_tensor() - tensor_data.min_in_tensor();
-    // loop through tensor values normalizing and appending to new array
+    // loop through tensor values normalizing and appending to a new array
     let mut i: u32 = 0;
 
     loop {
@@ -444,12 +442,14 @@ fn normalize_label_data(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
 
 ```
 
+Looking at the code above, we also have implemented a new `Dataset` struct to encapsulate the predictor features (x_values) and target variable (y_values) into a single reusable data object. By bundling x and y into Dataset, we can easily implement new methods into it such as the `normalize_dataset()`, allowing for a seamless normalization of both components simultaneously. This approach not only streamlines normalization operations in a single step but also eliminates redundant logic.
+
 
 ### The MLR Solver in Cairo
 
 To keep everything organized let's now make a new folder named `model` under the main `src` folder. Within it, we will  create a dedicated Cairo file named `multiple_linear_regression_model.cairo` to host all our MLR functions in Cairo.
 
-At the heart of this file lies the pivotal `MultipleLinearRegression()` function, which orchestrates the entire model fitting process. This function plays a central role by invoking  critical functions such  `Decorrelate_x_features()`, `add_bias_term()`, and `compute_gradients()`, to calculate the regression coefficients. It is important to notice that the output of the `MultipleLinearRegression` function returns the newly created  `MultipleLinearRegressionModel` struct. This is done to encapsulate the trained model parameters into a reusable bundle that contains the fitted coefficients.
+At the heart of this file lies the pivotal `MultipleLinearRegression()` function, which orchestrates the entire model fitting process. This function plays a central role by invoking  critical functions such  as `Decorrelate_x_features()`, `add_bias_term()`, and `compute_gradients()`, to calculate the regression coefficients. It is important to notice that the output of the `MultipleLinearRegression` function returns the newly created  `MultipleLinearRegressionModel` object type. This is done to encapsulate the trained model parameters into a reusable bundle that contains the fitted coefficients.
 
 Let's also implement a `predict()` method into the new `MultipleLinearRegressionModel` struct which  should enable us to generate new predictions and forecasts  by simply passing the new feature X inputs to the function. This modular approach  avoids the need to re-fit the model each time when making new predictions allowing us to store, access, and conveniently manipulate model coefficients.
 
@@ -582,7 +582,7 @@ fn add_bias_term(x_feature: Tensor<FP16x16>, axis: u32) -> Tensor<FP16x16> {
     return tensor_with_bias;
 }
 
-// decorrelates the feature data (*only the last tensor row of the decorelated feature data will be fully orthogonal)
+// decorrelates the feature data (*only the last tensor row of the decorrelated feature data will be fully orthogonal)
 fn decorrelate_x_features(x_feature_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
     let mut input_tensor = x_feature_data;
 
@@ -601,7 +601,7 @@ fn decorrelate_x_features(x_feature_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
                     FP16x16
                 >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
         }
-        // loop throgh remaining tensor data and remove the individual tensor factors from one another 
+        // loop through remaining tensor data and remove the individual tensor factors from one another 
         let mut j: u32 = i + 1;
         loop {
             if j >= *x_feature_data.shape.at(0) {
@@ -613,7 +613,7 @@ fn decorrelate_x_features(x_feature_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
             remaining_tensor_values = remaining_tensor_values
                 - (feature_row_values
                     * feature_gradients); //remove the feature factors from one another
-            // loop and append the modifieed remaining_tensor_values (after the corelated factor has been removed) to placeholder array
+            // loop and append the modified remaining_tensor_values (after the correlated factor has been removed) to the placeholder array
             let mut k: u32 = 0;
             loop {
                 if k >= remaining_tensor_values.data.len() {
@@ -659,7 +659,7 @@ fn compute_gradients(
     let mut result = ArrayTrait::<FP16x16>::new();
     let mut tensor_y_vals = y_values;
     let mut i: u32 = *decorrelated_x_features.shape.at(0);
-    // loop through Decorrelated_x_features starting from the fully orthogonlised last tensor row value
+    // loop through Decorrelated_x_features starting from the fully orthogonalized last tensor row values
     loop {
         if i <= 0 {
             break ();
@@ -667,7 +667,7 @@ fn compute_gradients(
         let index_val = i - 1;
         let mut decorelated_feature_row_values = get_tensor_data_by_row(
             decorrelated_x_features, index_val
-        ); // 50 vals
+        ); 
         let mut decorelated_features_squared = decorelated_feature_row_values
             .matmul(@decorelated_feature_row_values);
         let mut feature_label_cross_product = tensor_y_vals
@@ -679,17 +679,17 @@ fn compute_gradients(
                     FP16x16
                 >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
         }
-        // computing the feature gradient values using the y values and decorrelated x features and appending to array
+        // computing the feature gradient values using the y values and decorrelated x features and appending them to array
         let mut single_gradient_value = feature_label_cross_product
-            / decorelated_features_squared; // devide the summed value by each other
+            / decorelated_features_squared; // divide the summed value by each other
         result.append(*single_gradient_value.data.at(0));
-        // remove the assosciated feature gradient value away from y values
+        // remove the associated feature gradient value away from y values
         let mut original_x_tensor_row_values = get_tensor_data_by_row(
             original_x_tensor_values, index_val
         );
         tensor_y_vals = tensor_y_vals
             - (original_x_tensor_row_values
-                * single_gradient_value); //remove the first feature from second feature values
+                * single_gradient_value); //remove the first feature from the second feature values
         i -= 1;
     };
     // convert the gradient array to tensor format
@@ -726,7 +726,7 @@ mod multiple_linear_regression_model;
 ### Helper functions
 
 Now let's create an additional file named `helper_functions.cairo` under the main `src` folder which will
- host all our helper function required to construct the MLR Solver. Some of these functions will also be used later during the testing phase to assess the model's performance once fitted. This file consists of multiple functions some of which include:
+ host all our helper functions required to construct the MLR Solver. Some of these functions will also be used later during the testing phase to assess the model's performance once fitted. This file consists of multiple functions some of which include:
  
 - Function to help with retrieving tensor data by row and column index, which are essential for MLR construction
 - Function to compute the accuracy of our model using the R-squared method 
@@ -749,7 +749,7 @@ use orion::numbers::{FP16x16, FixedTrait};
 // retrieves row data by index in a 2D tensor
 fn get_tensor_data_by_row(tensor_data: Tensor<FP16x16>, row_index: u32,) -> Tensor<FP16x16> {
     let column_len = *tensor_data.shape.at(1); //13
-    // crete new array
+    // create new array
     let mut result = ArrayTrait::<FP16x16>::new();
     // loop through the x values and append values 
     let mut i: u32 = 0;
@@ -781,7 +781,7 @@ fn calculate_mean(tensor_data: Tensor<FP16x16>) -> FP16x16 {
     return mean;
 }
 
-// Calculates the R-Squared score between two tensors.
+// Calculates the R-squared score between two tensors.
 fn calculate_r_score(Y_values: Tensor<FP16x16>, Y_pred_values: Tensor<FP16x16>) -> FP16x16 {
     let mut Y_values_ = Y_values;
     let mean_y_value = calculate_mean(Y_values);
@@ -828,7 +828,7 @@ fn calculate_r_score(Y_values: Tensor<FP16x16>, Y_pred_values: Tensor<FP16x16>) 
 }
 
 
-// computes the x_min, x_max and x_range. Used for helping in normalizing and denormalizing user inputed values operations
+// computes the x_min, x_max and x_range. Used for helping in normalizing and denormalizing user input values operations
 fn normalize_user_x_inputs(
     x_inputs: Tensor<FP16x16>, original_x_values: Tensor<FP16x16>
 ) -> Tensor<FP16x16> {
@@ -844,7 +844,7 @@ fn normalize_user_x_inputs(
     if original_x_values.shape.len() > 1 {
         let transposed_tensor = original_x_values.transpose(axes: array![1, 0].span());
         let data_len = *transposed_tensor.shape.at(0); //13
-        // loop through each row calculating the min, max and range row values for each feature columns
+        // loop through each row calculating the min, max, and range row values for each feature column
         let mut i: u32 = 0;
         loop {
             if i >= data_len {
@@ -1003,12 +1003,12 @@ assert(normalized_dataset.x_values.min_in_tensor() >= FixedTrait::new(0, false),
 // performing checks on the shape of normalized data
 assert(normalized_dataset.x_values.data.len()== main_x_vals.data.len() && 
 normalized_dataset.y_values.data.len()== main_y_vals.data.len() , 'normalized data shape mismatch');
-// performing checks on shape of coefficient values (gradient vals + bias)
+// performing checks on the shape of coefficient values (gradient vals + bias)
 assert(model.coefficients.data.len() == *main_x_vals.shape.at(1)+1, 'coefficient data shape mismatch');
 // model accuracy deviance checks
 assert(r_squared_score >= FixedTrait::new(62259, false), 'AAVE model acc. less than 95%');
 
-// using model to forecast aave's 7 day WETH net revenue forecast  
+// using the model to forecast aave's 7-day WETH net revenue forecast  
 let last_7_days_aave_data = aave_weth_revenue_data_input();
 let last_7_days_aave_data_normalized = normalize_user_x_inputs(last_7_days_aave_data, main_x_vals );
 let mut forecast_results  = model.predict (last_7_days_aave_data_normalized); 
@@ -1025,7 +1025,7 @@ Our model will get tested under the `multiple_linear_regression_test()` function
 3. <b>Model fitting:</b> Using the `MultipleLinearRegression` function we fit the normalized dataset and compute the regression coefficients.
 4. <b>Computing accuracy of the model:</b> To calculate the accuracy we utilize the `predict` method to compute the dot product between  the model's regression coefficients and the x values. We then compute the R-squared score to measure the accuracy of our model.
 5. <b>Perform some testing:</b> In the subsequent step we perform some checks to ensure that  the tensor shape/dimension is correct. We also check the model's accuracy deviance to see if it's still within an acceptable range.
-6. <b>Making forecasts:</b> If our checks have passed then our model should be clear to enable us to make new predictions. For this, we will use the `aave_weth_revenue_data_input()` values which represent the most recent AAVE datapoints which should enable us to make forecasts for the upcoming 7 days of AAVE's WETH Pool revenue.
+6. <b>Making forecasts:</b> If our checks have passed then our model should be clear to enable us to make new predictions. For this, we will use the `aave_weth_revenue_data_input()` values which represent the most recent AAVE datapoints which should enable us to make forecasts for the upcoming 7 days of AAVE's WETH Pool revenue. As observed the prediction also coincides with the previously projected values during the Python implementation.
 
 
 Finally, we can execute the test file by running:
@@ -1039,10 +1039,10 @@ running 1 tests
 test multiple_linear_regresion::test::multiple_linear_regression_test ... 
 test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out;
 ```
-:drum_with_drumsticks:.... And as we can our test cases have passed!  :confetti_ball: 
+:drum_with_drumsticks:.... And as we can our test cases have passed! Hooray!! :confetti_ball: 
 
 
-Congratulations on reaching this point! Hooray!! :clap: You are now ready to implement fully transparent and verifiable forecasting solutions using this MLR framework. 
+Congratulations on reaching this point! :clap: You are now ready to implement fully transparent and verifiable forecasting solutions using this MLR framework. 
 
 If you're looking for more examples of using the MLR Solver, look into [here]() as it covers more easy to follow jupyter notebook tutorials (e.g. Boston dataset). :grin: 
 
