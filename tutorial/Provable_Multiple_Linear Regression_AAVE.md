@@ -1,6 +1,6 @@
-# Provable Multiple Linear Regression Solver: Forecasting AAVE's Revenue metrics
+# Provable Multiple Linear Regression Solver: Forecasting AAVE's WETH Pool Lifetime Repayments
 
-For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and use it to forecast AAVE's future projected revenues as a practical example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
+For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and use it to forecast AAVE's future projected Lifetime Repayments as a practical example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
 
 ## Provability & Verifiability
 The key benefit of this Lightweight Multiple Linear Regression Solver lies in its commitment to Provability and Verifiability. By utilizing Cairo & Orion, the entire MLR system becomes inherently provable through STARKs, offering unparalleled transparency. This enables every inference of the model construction, execution, and prediction phase to be transparently proved using e.g. LambdaClass STARK Prover. In essence, the Provability and Verifiability aspect ensures that the tool is not only for prediction but also a framework to build accountability and trust in on-chain business environments.
@@ -39,7 +39,7 @@ The closed-form MLR comprises of three integral components:
 To demonstrate a realistic end-to-end implementation, we'll first work  with the AAVE dataset before delving into the implementation of the MLR Solver. Step by step, we'll implement the full process in Python first, which should lay the groundwork to allow us to make a seamless transition to Cairo in the subsequent stages of this tutorial.
 ### Preparing the AAVE dataset 
 
-To begin with, we will use the Aave dataset which can be accessed  from this [link](https://app.aavescan.com/). We will work with our cleaned-up version of the dataset which includes various business metrics such as liquidity incentives and borrowing rates, providing valuable insights for forecasting future revenues. 
+To begin with, we will use the Aave dataset which can be accessed  from this [link](https://app.aavescan.com/). We will work with our cleaned-up version of the dataset which includes various business metrics such as liquidity incentives and borrowing rates, providing valuable insights for forecasting future lifetime repayments. 
 
 ```python
 import pandas as pd
@@ -73,7 +73,7 @@ df = df[0:days_to_forecast]
 
 In order to separate the feature and label of our dataset, we have replicated the lifetime repayments column into a new target variable column whilst shifting its values up by 7 rows. This aligns each repayment value with the appropriate features from 7 days prior. Consequently,  the `lifetimeRepayments_7day_forecast` column will serve as our predictive label (y), while the other metrics across the same rows become our explanatory variables (X) for predicting future repayments. 
 
-By framing our features and labels in this format, we will be able to train the MLR model to be able to estimate the daily revenue repayments based on current lending pool metrics.
+By framing our features and labels in this format, we will be able to train the MLR model to be able to estimate the daily lifetime repayments based on current lending pool metrics.
 
 ### Data normalization
 We will now normalize the data using min-max scaling to transform all features and labels into a common 0-1 range.
@@ -186,9 +186,9 @@ print("R^2 score (denormalized):", accuracy_denormalized)
 
 <figure><img src="accuracy.png" alt=""><figcaption></figcaption></figure>
 
-### Forecasting the upcoming 7-Day Revenue Projections for AAVE's WETH Pool
+### Forecasting the upcoming 7-Day Lifetime Repayments Projections for AAVE's WETH Pool
 
-With the model now fitted, we can use the most recent data points to forecast future revenue projections. Additionally, we will calculate the uncertainty bounds of a 95% confidence interval for these predictions to quantify the reliability of our revenue projections based on the model's historical accuracy across the training data. By using both estimates of prediction and confidence intervals, we provide both revenue expectations and precision guidance that can help in business planning.
+With the model now fitted, we can use the most recent data points to forecast future repayments projections. Additionally, we will calculate the uncertainty bounds of a 95% confidence interval for these predictions to quantify the reliability of our repayment projections based on the model's historical accuracy across the training data. By using both estimates of prediction and confidence intervals, we provide both repayment expectations and precision guidance that can help in business planning.
 
 
 ```python
@@ -222,7 +222,7 @@ intervals = z_score *stderr * np.sqrt(np.arange(len(forecast_plot_data)))
 
 # Creating the plot
 plt.figure(figsize=(10, 5))
-plt.plot(Y_original , label='Historical Net Revenue')
+plt.plot(Y_original , label='Historical Lifetime Repayments')
 plt.plot(len(Y_original)-1 + np.arange(len(forecast_plot_data)), forecast_plot_data , color='orange', label='Upcoming 7 day forecast')
 plt.fill_between(len(Y_original)-1 + np.arange(len(forecast_plot_data)),  
                  (forecast_plot_data - intervals),
@@ -249,7 +249,7 @@ plt.show()
 ## Transition to Cairo
 Now that we have covered all the steps for constructing and fitting the MLR model using the AAVE dataset in Python, our subsequent step will be to implement it in Cairo. This transition will provide end-to-end provability across all aspects of the multiple linear regression system.
 
-In order to catalyze our development we will leverage Orion's built-in functions and operators to construct the MLR Solver and use it to forecast AAVE's Net Revenue.
+In order to catalyze our development we will leverage Orion's built-in functions and operators to construct the MLR Solver and use it to forecast AAVE's Lifetime Repayments.
 
 ### Code Structure
 The outlined code structure below should serve as a guide to help with  our implementation as we will be working within multiple folders.
@@ -351,7 +351,7 @@ generate_cairo_files(df_forecast_data, 'aave_weth_revenue_data_input', 'user_inp
 ```
 The converted  x and y  values will now be populated into `aave_x_features.cairo` and `aave_y_labels.cairo`,  which should be found under the `src/dataset/aave_data` folder. 
 
-On the other hand, the `aave_weth_revenue_data_input` will populated into `src/dataset/user_inputs_data` which is a separate folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics, which  will be later used for performing the 7-day revenue forecasts. 
+On the other hand, the `aave_weth_revenue_data_input` will populated into `src/dataset/user_inputs_data` which is a separate folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics, which  will be later used for performing the 7-day lifetime repayments forecasts. 
 
 Now that we have placed the files into this new folder structure,  we need to make sure that the files are still accessible to the compiler. Hence, let's create the files `aave_data.cairo` and `user_inputs_data.cairo` and add the following module references accordingly.
 ```rust
@@ -1035,7 +1035,7 @@ assert(model.coefficients.data.len() == *main_x_vals.shape.at(1)+1, 'coefficient
 // model accuracy deviance checks
 assert(r_squared_score >= FixedTrait::new(62259, false), 'AAVE model acc. less than 95%');
 
-// using the model to forecast aave's 7-day WETH net revenue forecast  
+// using the model to forecast aave's 7-day WETH net lifetime repayments forecast  
 let last_7_days_aave_data = aave_weth_revenue_data_input();
 let last_7_days_aave_data_normalized = normalize_user_x_inputs(last_7_days_aave_data, main_x_vals );
 let mut forecast_results  = model.predict (last_7_days_aave_data_normalized); 
@@ -1052,7 +1052,7 @@ Our model will get tested under the `multiple_linear_regression_test()` function
 3. <b>Model fitting:</b> Using the `MultipleLinearRegression` function we fit the normalized dataset and compute the regression coefficients.
 4. <b>Computing accuracy of the model:</b> To calculate the accuracy we utilize the `predict` method to compute the dot product between  the model's regression coefficients and the x values. We then compute the R-squared score to measure the accuracy of our model.
 5. <b>Perform some testing:</b> In the subsequent step we perform some checks to ensure that  the tensor shape/dimension is correct. We also check the model's accuracy deviance to see if it's still within an acceptable range.
-6. <b>Making forecasts:</b> If our checks have passed then our model should be clear to enable us to make new predictions. For this, we will use the `aave_weth_revenue_data_input()` values which represent the most recent AAVE datapoints which should enable us to make forecasts for the upcoming 7 days of AAVE's WETH Pool revenue. 
+6. <b>Making forecasts:</b> If our checks have passed then our model should be clear to enable us to make new predictions. For this, we will use the `aave_weth_revenue_data_input()` values which represent the most recent AAVE datapoints which should enable us to make forecasts for the upcoming 7 days of AAVE's WETH Pool Lifetime Repayments. 
 
 
 Finally, we can execute the test file by running:
