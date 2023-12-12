@@ -1,6 +1,6 @@
 # Provable Multiple Linear Regression Solver: Forecasting AAVE's Revenue metrics
 
-For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and  use it to forecast AAVE's future projected revenue, as an illustrative example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
+For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and use it to forecast AAVE's future projected revenues as a practical example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
 
 ## Provability & Verifiability
 The key benefit of this Lightweight Multiple Linear Regression Solver lies in its commitment to Provability and Verifiability. By utilizing Cairo & Orion, the entire MLR system becomes inherently provable through STARKs, offering unparalleled transparency. This enables every inference of the model construction, execution, and prediction phase to be transparently proved using e.g. LambdaClass STARK Prover. In essence, the Provability and Verifiability aspect ensures that the tool is not only for prediction but also a framework to build accountability and trust in on-chain business environments.
@@ -20,7 +20,7 @@ $$
 
 The regression coefficients, illustrated by β0, β1...βn play a pivotal role in quantifying the impact of each feature variable on the dependent variable. It not only enables us to discern the individual impact (magnitude and direction) but also unveils how they collaboratively combine to shape outcomes. 
 
-When incorporating multiple factors into our model, we can improve the prediction & forecasting accuracy of our model when compared to relying solely on a single predictor, as seen with simple regression. This enhancement can be mainly attributed to the fact that  real-world outcomes being typically influenced by a myriad of factors. Therefore, leveraging multiple linear regression (MLR) serves as a foundational stepping stone to adeptly capture the intricate relationships between features and labels, ultimately guiding us in building accurate and highly interpretable models.
+In summary, when incorporating multiple related factors into our model, we can improve the prediction & forecasting accuracy when compared to relying solely on a single predictor, as seen with simple regression. This enhancement can be mainly attributed to the fact that  real-world outcomes being typically influenced by a myriad of factors. Therefore, leveraging multiple linear regression (MLR) serves as a foundational stepping stone to adeptly capture the intricate relationships between features and labels, ultimately guiding us in building accurate and highly interpretable models.
 
 ## Closed-form approach for computing MLR gradients
 
@@ -41,9 +41,6 @@ To demonstrate a realistic end-to-end implementation, we'll first work  with the
 
 To begin with, we will use the Aave dataset which can be accessed  from this [link](https://app.aavescan.com/). We will work with our cleaned-up version of the dataset which includes various business metrics such as liquidity incentives and borrowing rates, providing valuable insights for forecasting future revenues. 
 
-In order to separate the feature and label of our dataset, we have replicated the lifetime repayments column into a new target variable column whilst shifting its values up by 7 rows. This aligns each repayment value with the appropriate features from 7 days prior. Consequently,  the `lifetimeRepayments_7day_forecast` column will serve as our predictive label (y), while the other metrics across the same rows become our explanatory variables (X) for predicting future repayments. 
-
-By framing our features and labels in this format, we will be able to train the MLR model to be able to estimate the daily revenue repayments based on current lending pool metrics.
 ```python
 import pandas as pd
 import numpy as np
@@ -56,7 +53,7 @@ df_main.drop('Unnamed: 0', axis=1, inplace=True)
 # Order the DataFrame from the oldest to the most recent datapoint based on the date
 df_main= df_main.iloc[::-1]
 
-#Since Most of the df values are in wei we devide all values by a fixed factor to make the data easy to work with.
+#Since Most of the df values are in wei we divide all values by a fixed factor to make the data easy to work with.
 # Dividing by 1e+22 converts values to thousands of ETH and prevents overflow as we transition to Cairo later.
 factor = 1e+22
 df_main = df_main/factor
@@ -73,6 +70,10 @@ df = df[0:days_to_forecast]
 | 28 | 0.001740 | 8.02 | 12.4 | 207.0 | 0.0550 | 119.0 | 28.8 | 76.5 | 3320.0 | 77.5 |
 | 27 | 0.002120 | 9.59 | 12.8 | 212.0 | 0.0550 | 124.0 | 28.6 | 77.0 | 3180.0 | 77.6 |
 | 26 | 0.000017 | 10.00 | 14.1 | 215.0 | 0.0575 | 128.0 | 28.7 | 77.3 | 3150.0 | 78.0 |
+
+In order to separate the feature and label of our dataset, we have replicated the lifetime repayments column into a new target variable column whilst shifting its values up by 7 rows. This aligns each repayment value with the appropriate features from 7 days prior. Consequently,  the `lifetimeRepayments_7day_forecast` column will serve as our predictive label (y), while the other metrics across the same rows become our explanatory variables (X) for predicting future repayments. 
+
+By framing our features and labels in this format, we will be able to train the MLR model to be able to estimate the daily revenue repayments based on current lending pool metrics.
 
 ### Data normalization
 We will now normalize the data using min-max scaling to transform all features and labels into a common 0-1 range.
@@ -97,11 +98,11 @@ y_normalized= normalize_data(Y_original)
 
 ```
 ### Computing MLR gradients
-As outlined in the prior section, this closed-form approach to computing the regression coefficients does not rely on gradient descent. Instead, it  orthogonalizes X feature variables, ensuring independence across predictors. It then calculates the gradient between the orthogonalized X features and the y variable.  This approach allows us to compute the exact coefficients in a single step, eliminating the need for iterative approximations.
+As outlined in the prior section, this closed-form approach to computing the regression coefficients does not rely on gradient descent. Instead, it  orthogonalizes the x feature variables, ensuring independence across predictors. It then calculates the gradient between the orthogonalized x features and the y variable.  This approach allows us to compute the exact coefficients in a single step, eliminating the need for iterative approximations.
 
 It's <b>very important</b> to notice that in the `decorrelate_features` function, only the last feature row  is fully orthogonalized. The rest of the features are  decorelated from one another but <b>are not fully orthogonal to each other</b>. This is done to save on computational costs and make the algorithm more efficient since we can still compute the coefficients without necessarily needing to fully orthogonalize them.
 
-This is better illustrated in the  `calculate_gradients` function, as the process starts from the last fully orthogonalized X feature. It then computes the corresponding gradient and removes this feature's influence from the y label. By iteratively repeating this process across all features we can compute the gradient without the need to have all  features fully orthogonalized since we are removing their influences from the y label iteratively. This streamlined approach reduces computational steps and memory requirements, enhancing the algorithm's efficiency and performance.
+This is better illustrated in the  `calculate_gradients` function, as the process starts from the last fully orthogonalized X feature. Subsequently, it then computes the corresponding gradient and removes this feature's influence from the y label. By iteratively repeating this process across all features we can compute the gradient without the need to have all  features fully orthogonalized since we are also removing their influences from the y label iteratively. This streamlined approach reduces computational steps and memory requirements, enhancing the algorithm's efficiency and performance.
 
 ```python
 #We will first transpose the X features and add a bias term.
