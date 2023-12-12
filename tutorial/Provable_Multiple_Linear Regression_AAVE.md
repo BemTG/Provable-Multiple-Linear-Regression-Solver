@@ -250,6 +250,31 @@ Now that we have covered all the steps of constructing and fitting the MLR model
 
 In order to catalyze our development we will leverage Orion's built-in functions and operators to construct our fully verifiable MLR Solver and utilize it to forecast the AAVE's Net Revenue.
 
+### Code Structure
+The outlined code structure below should serves as a guide to help with  our implementation as we start to build the MLR Solver and use it to model the AAVE dataset.
+```
+.
+|
+├── datasets
+|   ├── aave_data
+|   |   ├── aave_x_features.cairo
+|   |   └── aave_y_labels.cairo
+│   ├── user_inputs_data
+|   |   └── aave_weth_revenue_data_input.cairo
+|   ├── aave_data.cairo
+|   └── user_inputs_data.cairo
+├── src
+│   ├── data_preprocessing.cairo
+│   ├── datasets.cairo
+│   ├── helper_functions.cairo
+│   ├── lib.cairo
+│   ├── model.cairo.cairo
+│   └── test.cairo
+├── Scarb.toml
+├── Scarb.lock |
+└── target
+```
+
 ### Setting up the Scarb project 
 Scarb is the Cairo package manager specifically created to streamline our Cairo development process. Scarb will typically manage project dependencies, the compilation process (both pure Cairo and Starknet contracts), and downloading and building external libraries such as Orion.You can find all the information about Scarb and Cairo installation [here](../../framework/get-started.md#installations). 
 
