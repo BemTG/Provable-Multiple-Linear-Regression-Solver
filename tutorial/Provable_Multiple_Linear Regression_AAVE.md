@@ -251,7 +251,7 @@ Now that we're familiar with and have covered all the steps of constructing and 
 In order to catalyze our development we will leverage Orion's built-in functions and operators to construct our fully verifiable MLR Solver and utilize it to forecast the AAVE's Net Revenue.
 
 ### Setting up the Scarb project 
-Scarb is the Cairo package manager specifically created to streamline our Cairo development process. Scarb will typically manage project dependencies, the compilation process (both pure Cairo and Starknet contracts), and downloading and building external libraries such as Orion.You can find all information about Scarb and Cairo installation [here](../../framework/get-started.md#installations). 
+Scarb is the Cairo package manager specifically created to streamline our Cairo development process. Scarb will typically manage project dependencies, the compilation process (both pure Cairo and Starknet contracts), and downloading and building external libraries such as Orion.You can find all the information about Scarb and Cairo installation [here](../../framework/get-started.md#installations). 
 
 To create a new Scarb project, open your terminal and run:
 
@@ -281,7 +281,7 @@ mod model;
 ```
 ### Converting the dataset to Cairo 
 
-To convert our AAVE dataset to Cairo let's execute the following Python code in our jupyter notebook. This simply creates a folder for us and converts the x and y variables into Orion's 16x16 tensor format whilst importing all the necessary  libraries in the process. Orion's 16x16 tensor format was chosen due to having a relatively good degree of accuracy for both the integer part and decimal part relative to our AAVE dataset.
+To convert our AAVE dataset to Cairo let's execute the following Python code in our jupyter notebook. This simply creates a new `datasets` folder for us and converts the x and y variables into Orion's 16x16 tensor format. Orion's 16x16 tensor format was chosen due to having a relatively good degree of accuracy for both the integer part and decimal part relative to our AAVE dataset. 
 ```python
 # Convert the original data to Cairo 
 def generate_cairo_files(data, name, folder_name):
@@ -321,7 +321,18 @@ generate_cairo_files(X_original, 'aave_x_features', 'aave_data')
 generate_cairo_files(Y_original, 'aave_y_labels', 'aave_data')
 generate_cairo_files(df_forecast_data, 'aave_weth_revenue_data_input', 'user_inputs_data')
 ```
+The converted 16x16 tensor x and y values will now be populated as `aave_x_features.cairo` and `aave_y_labels.cairo` under the `dataset/aave_data` folder. Whilst, the `aave_weth_revenue_data_input` will populated into `dataset/user_inputs_data` folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics which will be used as our reference when performing the 7-day AAVE's WETH pool Revenue in the last stages. 
 
+To ensure that the files are still accessible to the compiler we need to add references to them. For this let's create the new files `aave_data.cairo` and `user_inputs_data.cairo` under the dataset folder and add the following module references.
+```rust
+// in aave_data.cairo
+mod aave_x_features;
+mod aave_y_labels;
+```
+```rust
+// in user_inputs_data.cairo
+mod aave_weth_revenue_data_input;
+```
 
 ### Data Preprocessing
 
@@ -854,7 +865,7 @@ assert(r_squared_score >= FixedTrait::new(62259, false), 'AAVE model acc. less t
 let last_7_days_aave_data = aave_weth_revenue_data_input();
 let last_7_days_aave_data_normalized = normalize_user_x_inputs(last_7_days_aave_data, main_x_vals );
 let mut forecast_results  = model.predict (last_7_days_aave_data_normalized); 
-let mut rescale_forecasts = rescale_predictions(forecast_results, main_y_vals);  // PS. ** the rescaled forecasted ouputs are in denominated thousands of ETH
+let mut rescale_forecasts = rescale_predictions(forecast_results, main_y_vals);  // PS. ** the rescaled forecasted outputs are denominated in thousands of ETH
 // (*rescale_forecasts.data.at(0)).print();  // day1 forecast: 95.66773986816406 
 // (*rescale_forecasts.data.at(1)).print();  // day2: 96.64869689941406
 // (*rescale_forecasts.data.at(5)).print();  // day6: 99.44300842285156
