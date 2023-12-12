@@ -321,9 +321,9 @@ generate_cairo_files(X_original, 'aave_x_features', 'aave_data')
 generate_cairo_files(Y_original, 'aave_y_labels', 'aave_data')
 generate_cairo_files(df_forecast_data, 'aave_weth_revenue_data_input', 'user_inputs_data')
 ```
-The converted 16x16 tensor x and y values will now be populated as `aave_x_features.cairo` and `aave_y_labels.cairo` under the `dataset/aave_data` folder. Whilst, the `aave_weth_revenue_data_input` will populated into `dataset/user_inputs_data` folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics which will be used as our reference when performing the 7-day AAVE's WETH pool Revenue in the last stages. 
+The converted 16x16 tensor x and y values will now be populated into `aave_x_features.cairo` and `aave_y_labels.cairo` which should be found under the `dataset/aave_data` folder. On the other hand, the `aave_weth_revenue_data_input` will populated into the `dataset/user_inputs_data` folder. The `aave_weth_revenue_data_input` represents the latest AAVE's WETH lending pool metrics which will be used as our reference when performing the 7-day AAVE's WETH pool Revenue in the last stages. 
 
-To ensure that the files are still accessible to the compiler we need to add references to them. For this let's create the new files `aave_data.cairo` and `user_inputs_data.cairo` under the dataset folder and add the following module references.
+To ensure that the files are still accessible to the compiler we need to add references to them. For this let's create the new files `aave_data.cairo` and `user_inputs_data.cairo` under the dataset folder.  Let's now add the following module references accordingly.
 ```rust
 // in aave_data.cairo
 mod aave_x_features;
@@ -338,7 +338,7 @@ mod aave_weth_revenue_data_input;
 
 Now that our dataset has been generated, it is crucial to implement data normalization before feeding it into the MLR Solver. This is  <b>highly recommended </b> for any future MLR implementation in Cairo to mitigate potential overflow issues during subsequent stages. This is due to the closed-form approach for computing the regression coefficients involving squaring x values, which can become relatively large if left unnormalized.
 
-To facilitate this process, we will establish a dedicated Cairo file named `data_preprocessing.cairo`. This file will serve as the home for all our data preprocessing functions, including the essential min-max normalization function.
+To facilitate this process, we will establish a dedicated Cairo file named `data_preprocessing.cairo` which should located under `src`. This file will serve as the home for all our data preprocessing functions, including the essential min-max normalization function.
 
 As we can see from below we have implemented a `Dataset` struct to encapsulate the predictor features (x_values) and target variable (y_values) into a single reusable data object. By bundling x and y into Dataset, we can easily implement new methods into it such as the `normalize_dataset()`, allowing for a seamless normalization of both components simultaneously. This approach not only streamlines normalization operations in a single step but also eliminates redundant logic in future data normalization operations. 
 
@@ -432,7 +432,13 @@ fn normalize_label_data(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
 
 ### The MLR Solver in Cairo
 
-Now that we have implemented methods to normalize our dataset values,  let's create a dedicated Cairo file named `multiple_linear_regression_model.cairo` to host all our MLR functions in Cairo as we did earlier.  
+Now that we have implemented methods to normalize our dataset values,  let's create a dedicated Cairo file named `multiple_linear_regression_model.cairo` to host all our MLR functions in Cairo as we did earlier.  To keep everything organized we will save it into a new separate folder called `src/model`. 
+
+Once again to ensure that the file is accessible to the compiler we need to add the references modules. For this, we create a new file named `model.cairo` under `src` add the following:
+
+```rust
+mod multiple_linear_regression_model;
+```
 
 At the heart of this file lies the pivotal `MultipleLinearRegression()` function, which orchestrates the entire model fitting process. This function plays a central role by invoking  critical functions such  `Decorrelate_x_features()`, `add_bias_term()`, and `compute_gradients()`, to calculate the regression coefficients. It is important to notice that the output of the `MultipleLinearRegression` function returns the newly created  `MultipleLinearRegressionModel` struct. This is done to encapsulate the trained model parameters into a reusable bundle that contains the fitted coefficients.
 
@@ -636,11 +642,12 @@ fn compute_gradients( decorrelated_x_features: Tensor<FP16x16>, y_values: Tensor
 ```
 ### Helper functions
 
-Now let's create a separate file named `helper_functions.cairo` which will
- provide us with essential components to help support our efforts during the construction phases of the MLR Solver. Some of these functions  will  also be later used to help us in assessing the model's performance once fitted during the testing phase. It consists of multiple functions some of which include:
-- A function for computing tensor means, essential for MLR construction and testing.
-- Function to compute the accuracy of our model using R-squared method 
-- Function to help with retrieving tensor data by row and column index
+Now let's create an additional  file named `helper_functions.cairo` under `src` which will
+ host all our helper function required to construct the MLR Solver. Some of these functions will also be used later during the testing phase to assess the model's performance once fitted. This file consists of multiple functions some of which include:
+ 
+- Function to help with retrieving tensor data by row and column index, which are essential for MLR construction
+- Function to compute the accuracy of our model using the R-squared method 
+- A function for computing tensor means used in testing.
 - Functions dedicated to normalizing feature inputs, enabling accurate predictions and forecasts.
 - A rescaling function tailored to adjust prediction results to appropriate sizes.
 
@@ -810,7 +817,7 @@ fn rescale_predictions(prediction_result:Tensor<FP16x16>, y_values: Tensor<FP16x
 
 ### Running tests on the model
 
-At this stage, we have already implemented all the  important sections of this tutorial in Cairo. What's left is doing some testing to ensure our model is behaving as expected. To perform our test we will create a new test file called `test.cairo` and import all the necessary libraries including our x and y values and the MLR solver traits and functions.  
+At this stage, we have already implemented all the  important sections of this tutorial in Cairo. What's left is doing some testing to ensure our model is behaving as expected. To perform our test we will create a new test file called `test.cairo` under `src` and import all the necessary libraries including our x and y values and the MLR solver traits and functions as seen bellow. 
 
 
 ```rust
@@ -895,7 +902,7 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out;
 :drum_with_drumsticks:.... And as we can our test cases have passed!  :confetti_ball: 
 
 
-Congratulations on reaching this point! Hooray!! :clap: You are now ready now to implement fully transparent and verifiable forecasting solutions using the MLR framework. 
+Congratulations on reaching this point! Hooray!! :clap: You are now ready to implement fully transparent and verifiable forecasting solutions using this MLR framework. 
 
 If you're looking for more examples of using the MLR Solver, look into [here]() as it covers more easy to follow jupyter notebook tutorials (e.g. Boston dataset). :grin: 
 
