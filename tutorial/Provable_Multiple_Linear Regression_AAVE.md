@@ -251,7 +251,7 @@ Now that we have covered all the steps of constructing and fitting the MLR model
 In order to catalyze our development we will leverage Orion's built-in functions and operators to construct our fully verifiable MLR Solver and utilize it to forecast the AAVE's Net Revenue.
 
 ### Code Structure
-The outlined code structure below should serves as a guide to help with  our implementation as we start to build the MLR Solver and use it to model the AAVE dataset.
+The outlined code structure below should serve as a guide to help with  our implementation, as we start to build the MLR Solver and use it to model the AAVE dataset.
 ```
 .
 |
@@ -1069,6 +1069,6 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 filtered out;
 
 Congratulations on reaching this point! :clap: You are now ready to implement fully transparent and verifiable forecasting solutions using this MLR framework. 
 
-If you're looking for more examples of using the MLR Solver, look into [here]() as it covers more easy to follow jupyter notebook tutorials (e.g. Boston dataset). :grin: 
+If you're looking for more examples of using the MLR Solver, look into [here](../notebook_tutorials) as it covers more easy-to-follow jupyter notebook tutorials (e.g. Boston dataset). :grin: 
 
 We invite you to join us in forging a future by making AI a transparent and reliable resource for all! 
