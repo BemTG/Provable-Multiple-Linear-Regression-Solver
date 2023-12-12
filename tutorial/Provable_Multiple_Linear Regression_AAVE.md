@@ -1,6 +1,6 @@
-# Provable Multiple Linear Regression Solver: Forecasting AAVE's WETH Pool Lifetime Repayments
+# Provable Multiple Linear Regression Solver: Forecasting AAVE's Lifetime Repayments
 
-For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and use it to forecast AAVE's future projected Lifetime Repayments as a practical example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
+For this particular tutorial, we will build a <b>Closed-Form Multiple Linear Regression algorithm</b> and use it to forecast AAVE's (WETH Pool) future projected Lifetime Repayments as a practical example. Towards the second half-end of the tutorial, we will convert the model to Cairo enabling us to make the entire MLR system to be fully  <b>Provable & Verifiable. </b>
 
 ## Provability & Verifiability
 The key benefit of this Lightweight Multiple Linear Regression Solver lies in its commitment to Provability and Verifiability. By utilizing Cairo & Orion, the entire MLR system becomes inherently provable through STARKs, offering unparalleled transparency. This enables every inference of the model construction, execution, and prediction phase to be transparently proved using e.g. LambdaClass STARK Prover. In essence, the Provability and Verifiability aspect ensures that the tool is not only for prediction but also a framework to build accountability and trust in on-chain business environments.
