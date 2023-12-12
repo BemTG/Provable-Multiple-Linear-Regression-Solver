@@ -347,83 +347,98 @@ Looking at the code below we also have implemented a new `Dataset` struct to enc
 ```rust
 // importing libs
 use orion::operators::tensor::{
-    Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, 
-    FP16x16TensorSub, FP16x16TensorAdd, FP16x16TensorDiv, FP16x16TensorMul};
-use orion::numbers::{FP16x16,  FixedTrait};
-use multiple_linear_regresion::helper_functions::{get_tensor_data_by_row, transpose_tensor, calculate_mean , 
-calculate_r_score, normalize_user_x_inputs, rescale_predictions};
+    Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, FP16x16TensorSub, FP16x16TensorAdd,
+    FP16x16TensorDiv, FP16x16TensorMul
+};
+use orion::numbers::{FP16x16, FixedTrait};
+use multiple_linear_regresion::helper_functions::{
+    get_tensor_data_by_row, transpose_tensor, calculate_mean, calculate_r_score,
+    normalize_user_x_inputs, rescale_predictions
+};
 
 #[derive(Copy, Drop)]
-struct Dataset{
+struct Dataset {
     x_values: Tensor<FP16x16>,
     y_values: Tensor<FP16x16>,
 }
 
 #[generate_trait]
 impl DataPreprocessing of DatasetTrait {
-    fn normalize_dataset(ref self:Dataset) -> Dataset{
-      let mut x_values = TensorTrait::<FP16x16>::new(array![1].span(),array![FixedTrait::new(0, false)].span());
-      let mut y_values = TensorTrait::<FP16x16>::new(array![1].span(),array![FixedTrait::new(0, false)].span());
+    fn normalize_dataset(ref self: Dataset) -> Dataset {
+        let mut x_values = TensorTrait::<FP16x16>::new(array![1].span(), array![FixedTrait::new(0, false)].span());
+        let mut y_values = TensorTrait::<FP16x16>::new(array![1].span(), array![FixedTrait::new(0, false)].span());
         // used for multiple_linear_regression_models
-        if self.x_values.shape.len()>1{
-        x_values = normalize_feature_data(self.x_values);
-        y_values = normalize_label_data(self.y_values);
-         }
-        // used for simple linear_regression_models
-        if self.x_values.shape.len()==1{
-        x_values = normalize_label_data(self.x_values);
-        y_values = normalize_label_data(self.y_values);
-         }
-        return Dataset{x_values, y_values};
+        if self.x_values.shape.len() > 1 {
+            x_values = normalize_feature_data(self.x_values);
+            y_values = normalize_label_data(self.y_values);
+        }
+        // used for linear_regression_models
+        if self.x_values.shape.len() == 1 {
+            x_values = normalize_label_data(self.x_values);
+            y_values = normalize_label_data(self.y_values);
+        }
+
+        return Dataset { x_values, y_values };
     }
 }
 
-// normalizes 2D Tensor (min-max normalization approach)
+// normalizes 2D Tensor
 fn normalize_feature_data(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
     let mut x_min_array = ArrayTrait::<FP16x16>::new();
     let mut x_max_array = ArrayTrait::<FP16x16>::new();
     let mut x_range_array = ArrayTrait::<FP16x16>::new();
     let mut normalized_array = ArrayTrait::<FP16x16>::new();
     // transpose to change rows to be columns
-    let transposed_tensor =  tensor_data.transpose(axes: array![1, 0].span());
+    let transposed_tensor = tensor_data.transpose(axes: array![1, 0].span());
     let tensor_shape = transposed_tensor.shape;
-    let tensor_row_len= *tensor_shape.at(0); 
-    let tensor_column_len= *tensor_shape.at(1); 
-    // loop and append max and min row values to the corresponding  array
-    let mut i :u32  = 0;
-    loop{
+    let tensor_row_len = *tensor_shape.at(0); // 13 
+    let tensor_column_len = *tensor_shape.at(1); //50
+    // loop and append max and min row values to corresponding  array
+    let mut i: u32 = 0;
+    loop {
         if i >= tensor_row_len {
-            break();
+            break ();
         }
         let mut transposed_tensor_row = get_tensor_data_by_row(transposed_tensor, i);
         x_max_array.append(transposed_tensor_row.max_in_tensor());
         x_min_array.append(transposed_tensor_row.min_in_tensor());
-        x_range_array.append(transposed_tensor_row.max_in_tensor() - transposed_tensor_row.min_in_tensor());
-        i+=1;
+        x_range_array
+            .append(transposed_tensor_row.max_in_tensor() - transposed_tensor_row.min_in_tensor());
+        i += 1;
     };
     // convert array to tensor format for ease of math operation
-    let mut x_min = TensorTrait::<FP16x16>::new(shape: array![1,tensor_row_len].span(), data: x_min_array.span());
-    let mut x_range = TensorTrait::<FP16x16>::new(shape: array![1,tensor_row_len].span(), data: x_range_array.span());
-    let normalized_tensor  = (tensor_data  - x_min) / x_range;
+    let mut x_min = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1, tensor_row_len].span(), data: x_min_array.span());
+    let mut x_range = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1, tensor_row_len].span(), data: x_range_array.span());
+    let normalized_tensor = (tensor_data - x_min) / x_range;
     return normalized_tensor;
 }
 
-// normalizes 1D tensor (min-max normalization approach)
+// normalizes 1D tensor
 fn normalize_label_data(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
+    let mut tensor_data_ = tensor_data;
     let mut normalized_array = ArrayTrait::<FP16x16>::new();
     let mut range = tensor_data.max_in_tensor() - tensor_data.min_in_tensor();
     // loop through tensor values normalizing and appending to new array
-    let mut i :u32  = 0;
-    loop{
-        if i >= tensor_data.data.len() {
-            break();
-        }
-        let mut diff = tensor_data.at(indices: array![i].span()) - tensor_data.min_in_tensor();
-        normalized_array.append(diff / range );
-        i+=1;
+    let mut i: u32 = 0;
+
+    loop {
+        match tensor_data_.data.pop_front() {
+            Option::Some(tensor_val) => {
+                let mut diff = *tensor_val - tensor_data.min_in_tensor();
+                normalized_array.append(diff / range);
+                i += 1;
+            },
+            Option::None(_) => { break; }
+        };
     };
     // convert normalized array values to tensor format
-    let mut normalized_tensor = TensorTrait::<FP16x16>::new(shape: array![tensor_data.data.len()].span(), data: normalized_array.span());
+    let mut normalized_tensor = TensorTrait::<
+        FP16x16
+    >::new(shape: array![tensor_data.data.len()].span(), data: normalized_array.span());
     return normalized_tensor;
 }
 
@@ -441,196 +456,262 @@ Let's also implement a `predict()` method into the new `MultipleLinearRegression
 All of the function MLR functions implemented can be seen below:
 ```rust
 use orion::operators::tensor::{
-    Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, 
-    FP16x16TensorSub, FP16x16TensorAdd, FP16x16TensorDiv, FP16x16TensorMul};
-use orion::numbers::{FP16x16,  FixedTrait};
+    Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, FP16x16TensorSub, FP16x16TensorAdd,
+    FP16x16TensorDiv, FP16x16TensorMul
+};
+use orion::numbers::{FP16x16, FixedTrait};
 use multiple_linear_regresion::data_preprocessing::{Dataset, DatasetTrait};
-use multiple_linear_regresion::helper_functions::{get_tensor_data_by_row, transpose_tensor, calculate_mean , 
-calculate_r_score, normalize_user_x_inputs, rescale_predictions};
+use multiple_linear_regresion::helper_functions::{
+    get_tensor_data_by_row, transpose_tensor, calculate_mean, calculate_r_score,
+    normalize_user_x_inputs, rescale_predictions
+};
 
-// Define our MLR model struct
+
 #[derive(Copy, Drop)]
 struct MultipleLinearRegressionModel {
     coefficients: Tensor<FP16x16>
-
 }
 
-// Implement the trait for Regression Operations
 #[generate_trait]
 impl RegressionOperation of MultipleLinearRegressionModelTrait {
-// reconstruct the y values using the computed gradients and x values
-fn predict (ref self:MultipleLinearRegressionModel, feature_inputs:Tensor<FP16x16>) ->Tensor<FP16x16> {
-        let mut prediction_result =   TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(0, false)].span());
+    // reconstruct the y values using the computed gradients and x values
+    fn predict(
+        ref self: MultipleLinearRegressionModel, feature_inputs: Tensor<FP16x16>
+    ) -> Tensor<FP16x16> {
+        // random tensor value that we will replace
+        let mut prediction_result = TensorTrait::<
+            FP16x16
+        >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+
         let mut result = ArrayTrait::<FP16x16>::new();
-        // for multiple input predictions
-        if feature_inputs.shape.len()>1{
+        // for multiple predictions
+        if feature_inputs.shape.len() > 1 {
             let feature_values = add_bias_term(feature_inputs, 1);
-            let mut data_len:u32 = *feature_values.shape.at(0);        
-            let mut i:u32 = 0;
-            loop{
-            if i>=data_len{   
-                break();
-            }
-            let feature_row_values = get_tensor_data_by_row(feature_values, i);
-            let predicted_values = feature_row_values.matmul(@self.coefficients); 
-            result.append(*predicted_values.data.at(0));
-            i+=1;
+            let mut data_len: u32 = *feature_values.shape.at(0);
+            let mut i: u32 = 0;
+            loop {
+                if i >= data_len {
+                    break ();
+                }
+                let feature_row_values = get_tensor_data_by_row(feature_values, i);
+                let predicted_values = feature_row_values.matmul(@self.coefficients);
+                result.append(*predicted_values.data.at(0));
+                i += 1;
             };
-            //update prediction result
-            prediction_result =  TensorTrait::<FP16x16>::new(shape: array![ result.len()].span(), data: result.span());
+            prediction_result =
+                TensorTrait::<
+                    FP16x16
+                >::new(shape: array![result.len()].span(), data: result.span());
         }
 
-        // for single input predictions 
-        if feature_inputs.shape.len()==1 && self.coefficients.data.len()>1 {
+        // for single predictions 
+        if feature_inputs.shape.len() == 1 && self.coefficients.data.len() > 1 {
             let feature_values = add_bias_term(feature_inputs, 1);
-            //update prediction result
-            prediction_result = feature_values.matmul(@self.coefficients); 
+            prediction_result = feature_values.matmul(@self.coefficients);
         }
-    return prediction_result;
+
+        return prediction_result;
     }
 }
 
 fn MultipleLinearRegression(dataset: Dataset) -> MultipleLinearRegressionModel {
     let x_values_tranposed = transpose_tensor(dataset.x_values);
-    let x_values_tranposed_with_bias= add_bias_term(x_values_tranposed,0);
+    let x_values_tranposed_with_bias = add_bias_term(x_values_tranposed, 0);
     let decorrelated_x_features = decorrelate_x_features(x_values_tranposed_with_bias);
-    let coefficients = compute_gradients( decorrelated_x_features, dataset.y_values, x_values_tranposed_with_bias);
- return MultipleLinearRegressionModel { coefficients};
+    let coefficients = compute_gradients(
+        decorrelated_x_features, dataset.y_values, x_values_tranposed_with_bias
+    );
+    return MultipleLinearRegressionModel { coefficients };
 }
 
 //Adds bias term to features based on axis
-fn add_bias_term(x_feature: Tensor<FP16x16>, axis:u32) -> Tensor<FP16x16>{
-    let mut tensor_with_bias =   TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+fn add_bias_term(x_feature: Tensor<FP16x16>, axis: u32) -> Tensor<FP16x16> {
+    let mut x_feature_ = x_feature;
+    let mut tensor_with_bias = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
     let mut result = ArrayTrait::<FP16x16>::new();
     // check if feature data has multiple rows and columns
-    if x_feature.shape.len()>1 {
-        let mut index:u32=0;
-        if axis==1{
-            index=0;
+    if x_feature.shape.len() > 1 {
+        let mut index: u32 = 0;
+        if axis == 1 {
+            index = 0;
+        } else {
+            index = 1;
         }
-        else{
-            index=1;
-        }
-        let data_len= *x_feature.shape.at(index);  
-        let mut i:u32 = 0;
-        loop{
-            if i >=data_len{
-                break();
+        let data_len = *x_feature.shape.at(index); // 50
+        let mut i: u32 = 0;
+        loop {
+            if i >= data_len {
+                break ();
             }
-            result.append(FixedTrait::new(65536, false )); //65536=ONE in FP16x16, change accordingly  
-            i+=1;
+            result
+                .append(FixedTrait::new(65536, false)); //65536=ONE in FP16x16, change accordingly  
+            i += 1;
         };
-        if axis == 0{
-        let res_tensor = TensorTrait::new(shape: array![1,data_len].span(), data: result.span());
-        tensor_with_bias = TensorTrait::concat(tensors: array![x_feature, res_tensor].span(), axis: axis);}
-        else{
-        let res_tensor = TensorTrait::new(shape: array![data_len,1].span(), data: result.span());
-        tensor_with_bias = TensorTrait::concat(tensors: array![x_feature, res_tensor].span(), axis: axis);}
+        if axis == 0 {
+            let res_tensor = TensorTrait::new(
+                shape: array![1, data_len].span(), data: result.span()
+            );
+            tensor_with_bias =
+                TensorTrait::concat(tensors: array![x_feature, res_tensor].span(), axis: axis);
+        } else {
+            let res_tensor = TensorTrait::new(
+                shape: array![data_len, 1].span(), data: result.span()
+            );
+            tensor_with_bias =
+                TensorTrait::concat(tensors: array![x_feature, res_tensor].span(), axis: axis);
         }
+    }
     // check if feature data is 1D
-    if x_feature.shape.len()==1{
-        let mut j:u32 = 0;
-        loop{
-            if j>= x_feature.data.len() {
-                break();
-            }
-            result.append(*x_feature.data.at(j));
-            j+=1; 
+    if x_feature.shape.len() == 1 {
+        let mut j: u32 = 0;
+        loop {
+            match x_feature_.data.pop_front() {
+                Option::Some(x_val) => {
+                    result.append(*x_val);
+                    j += 1;
+                },
+                Option::None(_) => { break; }
+            };
         };
-        result.append(FixedTrait::new(65536, false )); //65536=ONE in FP16x16, change accordingly  
-        tensor_with_bias =  TensorTrait::<FP16x16>::new(shape: array![result.len()].span(), data: result.span());
-        }
+        result.append(FixedTrait::new(65536, false)); //65536=ONE in FP16x16, change accordingly  
+        tensor_with_bias =
+            TensorTrait::<FP16x16>::new(shape: array![result.len()].span(), data: result.span());
+    }
     return tensor_with_bias;
 }
 
-// decorrelates the feature data (*only the last tensor row of the decorrelated feature data will be fully orthogonal)
+// decorrelates the feature data (*only the last tensor row of the decorelated feature data will be fully orthogonal)
 fn decorrelate_x_features(x_feature_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
-    let mut input_tensor =  x_feature_data;
-    let mut i:u32 = 0;
+    let mut input_tensor = x_feature_data;
+
+    let mut i: u32 = 0;
     loop {
         if i >= *x_feature_data.shape.at(0) {
-            break();
+            break ();
         }
         let mut placeholder = ArrayTrait::<FP16x16>::new();
-        let mut feature_row_values  = get_tensor_data_by_row(input_tensor, i); 
+        let mut feature_row_values = get_tensor_data_by_row(input_tensor, i);
         let mut feature_squared = feature_row_values.matmul(@feature_row_values);
         // avoiding division by zero errors
         if *feature_squared.data.at(0) == FixedTrait::new(0, false) {
-            feature_squared = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+            feature_squared =
+                TensorTrait::<
+                    FP16x16
+                >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
         }
-        // loop through remaining tensor data and remove the individual tensor factors from one another 
-        let mut j:u32 = i+ 1;
+        // loop throgh remaining tensor data and remove the individual tensor factors from one another 
+        let mut j: u32 = i + 1;
         loop {
-            if j >= *x_feature_data.shape.at(0)  {
-                break();
+            if j >= *x_feature_data.shape.at(0) {
+                break ();
             }
-            let mut remaining_tensor_values = get_tensor_data_by_row(input_tensor, j); 
-            let feature_cross_product = feature_row_values.matmul(@remaining_tensor_values); 
-            let feature_gradients = feature_cross_product / feature_squared; 
-            remaining_tensor_values = remaining_tensor_values - (feature_row_values * feature_gradients);  //remove the feature factors from one another
-            // loop and append the modified remaining_tensor_values (after the correlated factor has been removed) to the placeholder array
-            let mut k:u32 = 0;
+            let mut remaining_tensor_values = get_tensor_data_by_row(input_tensor, j);
+            let feature_cross_product = feature_row_values.matmul(@remaining_tensor_values);
+            let feature_gradients = feature_cross_product / feature_squared;
+            remaining_tensor_values = remaining_tensor_values
+                - (feature_row_values
+                    * feature_gradients); //remove the feature factors from one another
+            // loop and append the modifieed remaining_tensor_values (after the corelated factor has been removed) to placeholder array
+            let mut k: u32 = 0;
             loop {
-            if k >=  remaining_tensor_values.data.len() {
-                break();
-            }
-            placeholder.append(*remaining_tensor_values.data.at(k));
-            k+= 1;
+                if k >= remaining_tensor_values.data.len() {
+                    break ();
+                }
+                placeholder.append(*remaining_tensor_values.data.at(k));
+                k += 1;
             };
 
             j += 1;
-            };
-            // convert placeholder array to tensor format and update the original tensor with the new modified decorrelated tensor row values
-            let mut decorrelated_tensor = TensorTrait::new(shape: array![*x_feature_data.shape.at(0)-1-i, *x_feature_data.shape.at(1)].span(), data: placeholder.span());
-            let mut original_tensor = input_tensor.slice(starts: array![0, 0].span(), ends: array![i+1, *x_feature_data.shape.at(1)].span(), axes: Option::None(()), steps: Option::Some(array![1, 1].span()));
-            input_tensor = TensorTrait::concat(tensors: array![original_tensor, decorrelated_tensor].span(), axis: 0);
-            i +=1;
         };
-        return input_tensor;
+        // convert placeholder array to tensor format and update the original tensor with the new modified decorrelated tensor row values
+        let mut decorrelated_tensor = TensorTrait::new(
+            shape: array![*x_feature_data.shape.at(0) - 1 - i, *x_feature_data.shape.at(1)].span(),
+            data: placeholder.span()
+        );
+        let mut original_tensor = input_tensor
+            .slice(
+                starts: array![0, 0].span(),
+                ends: array![i + 1, *x_feature_data.shape.at(1)].span(),
+                axes: Option::None(()),
+                steps: Option::Some(array![1, 1].span())
+            );
+        input_tensor =
+            TensorTrait::concat(
+                tensors: array![original_tensor, decorrelated_tensor].span(), axis: 0
+            );
+        i += 1;
+    };
+    return input_tensor;
 }
 
 // computes the corresponding MLR gradient using decorrelated feature
-fn compute_gradients( decorrelated_x_features: Tensor<FP16x16>, y_values: Tensor<FP16x16>, original_x_tensor_values: Tensor<FP16x16>) -> Tensor<FP16x16> {
-    let mut gradient_values_flipped =   TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(0, false)].span());
+fn compute_gradients(
+    decorrelated_x_features: Tensor<FP16x16>,
+    y_values: Tensor<FP16x16>,
+    original_x_tensor_values: Tensor<FP16x16>
+) -> Tensor<FP16x16> {
+    let mut gradient_values_flipped = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+
     let mut result = ArrayTrait::<FP16x16>::new();
-    let mut tensor_y_vals =  y_values;
-    let mut i:u32 = *decorrelated_x_features.shape.at(0);
+    let mut tensor_y_vals = y_values;
+    let mut i: u32 = *decorrelated_x_features.shape.at(0);
     // loop through Decorrelated_x_features starting from the fully orthogonlised last tensor row value
     loop {
         if i <= 0 {
-            break();
+            break ();
         }
-        let index_val = i-1;
-        let mut decorelated_feature_row_values = get_tensor_data_by_row(decorrelated_x_features, index_val); // 50 vals
-        let mut decorelated_features_squared = decorelated_feature_row_values.matmul(@decorelated_feature_row_values);
-        let mut feature_label_cross_product = tensor_y_vals.matmul(@decorelated_feature_row_values); // multiply the tensors
+        let index_val = i - 1;
+        let mut decorelated_feature_row_values = get_tensor_data_by_row(
+            decorrelated_x_features, index_val
+        ); // 50 vals
+        let mut decorelated_features_squared = decorelated_feature_row_values
+            .matmul(@decorelated_feature_row_values);
+        let mut feature_label_cross_product = tensor_y_vals
+            .matmul(@decorelated_feature_row_values); // multiply the tensors
         // avoiding division by zero errors
         if *decorelated_features_squared.data.at(0) == FixedTrait::new(0, false) {
-            decorelated_features_squared = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+            decorelated_features_squared =
+                TensorTrait::<
+                    FP16x16
+                >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
         }
         // computing the feature gradient values using the y values and decorrelated x features and appending to array
-        let mut single_gradient_value = feature_label_cross_product / decorelated_features_squared; // devide the summed value by each other
+        let mut single_gradient_value = feature_label_cross_product
+            / decorelated_features_squared; // devide the summed value by each other
         result.append(*single_gradient_value.data.at(0));
         // remove the assosciated feature gradient value away from y values
-        let mut original_x_tensor_row_values = get_tensor_data_by_row(original_x_tensor_values, index_val);
-        tensor_y_vals = tensor_y_vals -(original_x_tensor_row_values * single_gradient_value);  //remove the first feature from second feature values
-        i -=1;
-        };
+        let mut original_x_tensor_row_values = get_tensor_data_by_row(
+            original_x_tensor_values, index_val
+        );
+        tensor_y_vals = tensor_y_vals
+            - (original_x_tensor_row_values
+                * single_gradient_value); //remove the first feature from second feature values
+        i -= 1;
+    };
     // convert the gradient array to tensor format
-    let final_gradients = TensorTrait::new(shape: array![*decorrelated_x_features.shape.at(0)].span(), data: result.span());
+    let final_gradients = TensorTrait::new(
+        shape: array![*decorrelated_x_features.shape.at(0)].span(), data: result.span()
+    );
 
     let mut reverse_grad_array = ArrayTrait::<FP16x16>::new();
-    let mut data_len:u32 = final_gradients.data.len();
-    loop{
-        if data_len<=0 {
-            break();
+    let mut data_len: u32 = final_gradients.data.len();
+    loop {
+        if data_len <= 0 {
+            break ();
         }
-        let temp_val = data_len-1;
+        let temp_val = data_len - 1;
         reverse_grad_array.append(*final_gradients.data.at(temp_val));
-        data_len-=1; 
+        data_len -= 1;
     };
     // convert gradient values to tensor format
-    let gradient_values_flipped =  TensorTrait::<FP16x16>::new(shape: array![reverse_grad_array.len()].span(), data: reverse_grad_array.span());
+    let gradient_values_flipped = TensorTrait::<
+        FP16x16
+    >::new(shape: array![reverse_grad_array.len()].span(), data: reverse_grad_array.span());
+
     return gradient_values_flipped;
 }
 ```
@@ -659,36 +740,39 @@ Now let's create an additional file named `helper_functions.cairo` under the mai
 use debug::PrintTrait;
 use array::{ArrayTrait, SpanTrait};
 use orion::operators::tensor::{
-    Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, 
-    FP16x16TensorSub, FP16x16TensorAdd, FP16x16TensorDiv, FP16x16TensorMul};
-use orion::numbers::{FP16x16,  FixedTrait};
+    Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, FP16x16TensorSub, FP16x16TensorAdd,
+    FP16x16TensorDiv, FP16x16TensorMul
+};
+
+use orion::numbers::{FP16x16, FixedTrait};
 
 // retrieves row data by index in a 2D tensor
-fn get_tensor_data_by_row(tensor_data: Tensor<FP16x16>, row_index: u32, ) -> Tensor<FP16x16> {
-    let tensor_shape = tensor_data.shape;
-    let tensor_column_len= *tensor_shape.at(0);
-    let tensor_row_len= *tensor_shape.at(1); 
+fn get_tensor_data_by_row(tensor_data: Tensor<FP16x16>, row_index: u32,) -> Tensor<FP16x16> {
+    let column_len = *tensor_data.shape.at(1); //13
     // crete new array
     let mut result = ArrayTrait::<FP16x16>::new();
     // loop through the x values and append values 
-    let mut i:u32 = 0;
+    let mut i: u32 = 0;
     loop {
-        if i >= tensor_row_len  {
-            break();
+        if i >= column_len {
+            break ();
         }
-        result.append(tensor_data.at(indices: array![row_index,i].span()));
+        result.append(tensor_data.at(indices: array![row_index, i].span()));
         i += 1;
-        };
-    let resultant_tensor = TensorTrait::<FP16x16>::new(array![tensor_row_len].span(), data: result.span());
+    };
+    let resultant_tensor = TensorTrait::<
+        FP16x16
+    >::new(array![column_len].span(), data: result.span());
     return resultant_tensor;
 }
 
+
 // transposes tensor
-fn transpose_tensor(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16>{
+fn transpose_tensor(tensor_data: Tensor<FP16x16>) -> Tensor<FP16x16> {
     let tensor_transposed = tensor_data.transpose(axes: array![1, 0].span());
     return tensor_transposed;
 }
-// calculates the mean value of a tensor
+
 fn calculate_mean(tensor_data: Tensor<FP16x16>) -> FP16x16 {
     let tensor_size = FixedTrait::<FP16x16>::new_unscaled(tensor_data.data.len(), false);
     let cumulated_sum = tensor_data.cumsum(0, Option::None(()), Option::None(()));
@@ -699,6 +783,7 @@ fn calculate_mean(tensor_data: Tensor<FP16x16>) -> FP16x16 {
 
 // Calculates the R-Squared score between two tensors.
 fn calculate_r_score(Y_values: Tensor<FP16x16>, Y_pred_values: Tensor<FP16x16>) -> FP16x16 {
+    let mut Y_values_ = Y_values;
     let mean_y_value = calculate_mean(Y_values);
     // creating the appropriate tensor shapes and empty arrays to populate values into
     let mut squared_diff_shape = array::ArrayTrait::new();
@@ -709,111 +794,161 @@ fn calculate_r_score(Y_values: Tensor<FP16x16>, Y_pred_values: Tensor<FP16x16>) 
     let mut squared_mean_diff_vals = array::ArrayTrait::new();
 
     let mut i: u32 = 0;
-    loop {
-        if i >= Y_values.data.len() {
-            break ();
-        }
-        let diff_pred = *Y_values.data.at(i) - *Y_pred_values.data.at(i);
-        let squared_diff = diff_pred * diff_pred;
-        squared_diff_vals.append(squared_diff);
 
-        let diff_mean = *Y_values.data.at(i) - mean_y_value;
-        let squared_mean_diff = diff_mean * diff_mean;
-        squared_mean_diff_vals.append(squared_mean_diff);
-        i += 1;
+    loop {
+        match Y_values_.data.pop_front() {
+            Option::Some(y_value) => {
+                let diff_pred = *y_value - *Y_pred_values.data.at(i);
+                let squared_diff = diff_pred * diff_pred;
+                squared_diff_vals.append(squared_diff);
+
+                let diff_mean = *y_value - mean_y_value;
+                let squared_mean_diff = diff_mean * diff_mean;
+                squared_mean_diff_vals.append(squared_mean_diff);
+                i += 1;
+            },
+            Option::None(_) => { break; }
+        }
     };
-    let squared_diff_tensor = TensorTrait::<FP16x16>::new(
-        squared_diff_shape.span(), squared_diff_vals.span()
-    );
-    let squared_mean_diff_tensor = TensorTrait::<FP16x16>::new(
-        squared_mean_diff_shape.span(), squared_mean_diff_vals.span()
-    );
+
+    let squared_diff_tensor = TensorTrait::<
+        FP16x16
+    >::new(squared_diff_shape.span(), squared_diff_vals.span());
+    let squared_mean_diff_tensor = TensorTrait::<
+        FP16x16
+    >::new(squared_mean_diff_shape.span(), squared_mean_diff_vals.span());
     let sum_squared_diff = squared_diff_tensor.cumsum(0, Option::None(()), Option::None(()));
-    let sum_squared_mean_diff = squared_mean_diff_tensor.cumsum(0, Option::None(()), Option::None(()));
+    let sum_squared_mean_diff = squared_mean_diff_tensor
+        .cumsum(0, Option::None(()), Option::None(()));
     let r_score = FixedTrait::new_unscaled(1, false)
         - *sum_squared_diff.data.at(Y_values.data.len() - 1)
             / *sum_squared_mean_diff.data.at(Y_values.data.len() - 1);
+
     return r_score;
 }
 
-// computes the x_min, x_max and x_range. Used for helping in normalize user inputed X values 
-fn normalize_user_x_inputs(x_inputs:Tensor<FP16x16>, original_x_values: Tensor<FP16x16>) -> Tensor<FP16x16> {
-    let mut x_inputs_normalized =   TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
-    let mut x_min= ArrayTrait::<FP16x16>::new();
-    let mut x_max= ArrayTrait::<FP16x16>::new();
-    let mut x_range= ArrayTrait::<FP16x16>::new();
-    let mut result= ArrayTrait::<FP16x16>::new();
-    
-    if original_x_values.shape.len()>1{ 
-    let transposed_tensor =  original_x_values.transpose(axes: array![1, 0].span());
-    let data_len= *transposed_tensor.shape.at(0); //13
-    // loop through each row calculating the min, max and range row values for each feature columns
-    let mut i :u32  = 0;
-    loop{
-        if i >= data_len {
-            break();
-        }
-        let mut transposed_tensor_row = get_tensor_data_by_row(transposed_tensor, i);
-        x_min.append(transposed_tensor_row.min_in_tensor());
-        x_max.append(transposed_tensor_row.max_in_tensor());
-        x_range.append(transposed_tensor_row.max_in_tensor() - transposed_tensor_row.min_in_tensor());
-        i+=1;
-    };
-    let mut x_min_tensor= TensorTrait::new(shape: array![data_len].span(), data: x_min.span());
-    let mut x_max_tensor= TensorTrait::new(shape: array![data_len].span(), data: x_max.span());
-    let mut x_range_tensor= TensorTrait::new(shape: array![data_len].span(), data: x_range.span());
 
-    // for normalizing 2D user inputed feature vals
-    if x_inputs.shape.len()>1{ 
-    let mut j:u32 = 0;
-    loop{
-        if j >= *x_inputs.shape.at(0) {
-            break();
-        };
-        let mut row_data = get_tensor_data_by_row(x_inputs, j);
-        let mut norm_row_data = (row_data - x_min_tensor) / x_range_tensor;
-        let mut k:u32 =0;
-        loop{
-            if k >= norm_row_data.data.len() {
-            break();
-        };
-         result.append(*norm_row_data.data.at(k));
-        k+=1;
-        };
-    j+=1;
-    };
-    x_inputs_normalized = TensorTrait::<FP16x16>::new(array![*x_inputs.shape.at(0), *x_inputs.shape.at(1)].span(), data: result.span());
-    
-     };
+// computes the x_min, x_max and x_range. Used for helping in normalizing and denormalizing user inputed values operations
+fn normalize_user_x_inputs(
+    x_inputs: Tensor<FP16x16>, original_x_values: Tensor<FP16x16>
+) -> Tensor<FP16x16> {
+    let mut x_inputs_normalized = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
 
-    // for normalizing 1D feature input
-    if x_inputs.shape.len()==1{
-    x_inputs_normalized = (x_inputs - x_min_tensor) / x_range_tensor;
-    };
+    let mut x_min = ArrayTrait::<FP16x16>::new();
+    let mut x_max = ArrayTrait::<FP16x16>::new();
+    let mut x_range = ArrayTrait::<FP16x16>::new();
+    let mut result = ArrayTrait::<FP16x16>::new();
+
+    if original_x_values.shape.len() > 1 {
+        let transposed_tensor = original_x_values.transpose(axes: array![1, 0].span());
+        let data_len = *transposed_tensor.shape.at(0); //13
+        // loop through each row calculating the min, max and range row values for each feature columns
+        let mut i: u32 = 0;
+        loop {
+            if i >= data_len {
+                break ();
+            }
+            let mut transposed_tensor_row = get_tensor_data_by_row(transposed_tensor, i);
+            x_min.append(transposed_tensor_row.min_in_tensor());
+            x_max.append(transposed_tensor_row.max_in_tensor());
+            x_range
+                .append(
+                    transposed_tensor_row.max_in_tensor() - transposed_tensor_row.min_in_tensor()
+                );
+            i += 1;
+        };
+        let mut x_min_tensor = TensorTrait::new(shape: array![data_len].span(), data: x_min.span());
+        let mut x_max_tensor = TensorTrait::new(shape: array![data_len].span(), data: x_max.span());
+        let mut x_range_tensor = TensorTrait::new(
+            shape: array![data_len].span(), data: x_range.span()
+        );
+
+        // for normalizing 2D user inputed feature vals
+        if x_inputs.shape.len() > 1 {
+            let mut j: u32 = 0;
+            loop {
+                if j >= *x_inputs.shape.at(0) {
+                    break ();
+                };
+                let mut row_data = get_tensor_data_by_row(x_inputs, j);
+                let mut norm_row_data = (row_data - x_min_tensor) / x_range_tensor;
+                let mut k: u32 = 0;
+
+                loop {
+                    if k >= norm_row_data.data.len() {
+                        break ();
+                    };
+                    result.append(*norm_row_data.data.at(k));
+                    k += 1;
+                };
+                j += 1;
+            };
+            x_inputs_normalized =
+                TensorTrait::<
+                    FP16x16
+                >::new(
+                    array![*x_inputs.shape.at(0), *x_inputs.shape.at(1)].span(), data: result.span()
+                );
+        };
+
+        // for normalizing 1D feature input
+        if x_inputs.shape.len() == 1 {
+            x_inputs_normalized = (x_inputs - x_min_tensor) / x_range_tensor;
+        };
     }
-    if original_x_values.shape.len()==1{
-        let mut  x_min_tensor = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![original_x_values.min_in_tensor()].span());
-        let mut x_max_tensor = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![original_x_values.max_in_tensor()].span());
-        let mut x_range_tensor = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![original_x_values.max_in_tensor() - original_x_values.min_in_tensor()].span());
-        let mut  diff = ((x_inputs - x_min_tensor));
-    x_inputs_normalized = ((x_inputs - x_min_tensor)) / x_range_tensor;
+
+    if original_x_values.shape.len() == 1 {
+        let mut x_min_tensor = TensorTrait::<
+            FP16x16
+        >::new(shape: array![1].span(), data: array![original_x_values.min_in_tensor()].span());
+        let mut x_max_tensor = TensorTrait::<
+            FP16x16
+        >::new(shape: array![1].span(), data: array![original_x_values.max_in_tensor()].span());
+        let mut x_range_tensor = TensorTrait::<
+            FP16x16
+        >::new(
+            shape: array![1].span(),
+            data: array![original_x_values.max_in_tensor() - original_x_values.min_in_tensor()]
+                .span()
+        );
+        let mut diff = ((x_inputs - x_min_tensor));
+        x_inputs_normalized = ((x_inputs - x_min_tensor)) / x_range_tensor;
     };
     return x_inputs_normalized;
 }
 
+
 // rescales model predictions to standard format
-fn rescale_predictions(prediction_result:Tensor<FP16x16>, y_values: Tensor<FP16x16>) -> Tensor<FP16x16> {
-    let mut rescale_predictions =   TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+fn rescale_predictions(
+    prediction_result: Tensor<FP16x16>, y_values: Tensor<FP16x16>
+) -> Tensor<FP16x16> {
+    let mut rescale_predictions = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![FixedTrait::new(10, false)].span());
+
+    let mut y_min_array = ArrayTrait::<FP16x16>::new();
+    let mut y_max_array = ArrayTrait::<FP16x16>::new();
+    let mut y_range_array = ArrayTrait::<FP16x16>::new();
+
     let mut y_max = y_values.max_in_tensor();
     let mut y_min = y_values.min_in_tensor();
     let mut y_range = y_values.max_in_tensor() - y_values.min_in_tensor();
     // convert to tensor format for ease of math operations
-    let y_min_tensor = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![ y_min].span());
-    let y_max_tensor = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![ y_max].span());
-    let y_range_tensor = TensorTrait::<FP16x16>::new(shape: array![1].span(), data: array![y_range].span());
-    rescale_predictions = (prediction_result * y_range_tensor)+ y_min_tensor;
+    let y_min_tensor = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![y_min].span());
+    let y_max_tensor = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![y_max].span());
+    let y_range_tensor = TensorTrait::<
+        FP16x16
+    >::new(shape: array![1].span(), data: array![y_range].span());
+
+    rescale_predictions = (prediction_result * y_range_tensor) + y_min_tensor;
+
     return rescale_predictions;
-}
 }
 ```
 
@@ -837,7 +972,10 @@ use multiple_linear_regresion::model::multiple_linear_regression_model::{
 use multiple_linear_regresion::data_preprocessing::{Dataset, DatasetTrait};
 use multiple_linear_regresion::helper_functions::{get_tensor_data_by_row, transpose_tensor, calculate_mean , 
 calculate_r_score, normalize_user_x_inputs, rescale_predictions};
+
 use orion::numbers::{FP16x16,  FixedTrait};
+
+
 use orion::operators::tensor::{
     Tensor, TensorTrait, FP16x16Tensor, U32Tensor, U32TensorAdd, 
     FP16x16TensorSub, FP16x16TensorAdd, FP16x16TensorDiv, FP16x16TensorMul};
